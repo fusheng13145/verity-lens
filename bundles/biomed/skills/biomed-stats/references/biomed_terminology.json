@@ -1,0 +1,34 @@
+{
+  "version": "0.1.0",
+  "discipline": "biomed",
+  "evidence_levels": [
+    "systematic-review",
+    "meta-analysis",
+    "rct",
+    "prospective-cohort",
+    "case-control",
+    "cross-sectional",
+    "case-report",
+    "animal-study",
+    "in-vitro"
+  ],
+  "required_reporting_metrics": {
+    "diagnostic": ["sensitivity", "specificity", "auc", "ci_95"],
+    "group_comparison": ["effect_size", "ci_95", "p_value", "test_used"],
+    "survival": ["hazard_ratio", "ci_95", "median_followup"]
+  },
+  "terms": {
+    "AD": "阿尔茨海默病（Alzheimer's disease）",
+    "Abeta": "β-淀粉样蛋白（Amyloid beta）",
+    "RMSD": "均方根偏差（Root-mean-square deviation，结构比较指标）",
+    "PHI": "受保护健康信息（Protected Health Information）",
+    "CONSORT": "临床试验报告统一标准",
+    "STROBE": "观察性研究报告规范",
+    "PRISMA": "系统综述/Meta 分析报告规范"
+  },
+  "naming_conventions": {
+    "experiment": "exp_<NNN>.yaml",
+    "hypothesis": "H<n>[.<n>]",
+    "failure_entry": "F-<NNN>"
+  }
+}

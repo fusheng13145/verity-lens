@@ -9,13 +9,16 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 PHASES: tuple[str, ...] = ("literature", "question", "experiment", "analysis", "writing")
+CATEGORIES: tuple[str, ...] = ("EXEC", "DATA", "METH", "HYP", "EPIS")
 
 EXIT_OK = 0
 EXIT_ERROR = 1
 EXIT_BLOCKED = 2
+EXIT_HARD_BLOCK = 3
 
 
 # ── 子命令实现 ────────────────────────────────────────────────────────
@@ -124,14 +127,72 @@ def cmd_gate(args) -> int:
 
 
 def cmd_loop(args) -> int:
-    """失败回流检查（Phase 1 实现）。"""
-    print("[loop] 失败回流检查：Phase 1 待实现")
-    return EXIT_OK
+    """扫描未处理的 failed 实验；存在则阻塞（退出码 2）。"""
+    from orchestrator.failure_loop import find_unresolved_failures, route, validate_entry
+
+    workspace = Path(args.path)
+    if not workspace.exists():
+        print(f"[ERROR] Workspace 不存在: {workspace}")
+        return EXIT_ERROR
+
+    unresolved = find_unresolved_failures(workspace)
+    if not unresolved:
+        print("[loop] 无未处理的失败实验，允许继续")
+        return EXIT_OK
+
+    print(f"[BLOCKED] 存在未处理的 failed 实验（{len(unresolved)} 项）：")
+    for i, exp_id in enumerate(unresolved, 1):
+        print(f"  {i}. {exp_id} → 需生成归因条目并人工批准后转终态")
+    if args.route:
+        print("\n路由建议：")
+        for exp_id in unresolved:
+            draft = {
+                "id": "F-000",
+                "experiment_id": exp_id,
+                "hypothesis_id": "UNKNOWN",
+                "phase": "experiment",
+                "detected_at": datetime.now(timezone.utc).isoformat(),
+                "classification": {
+                    "category": args.route,
+                    "code": f"{args.route}-AUTO",
+                    "confidence": 0.5,
+                },
+                "decision": {"type": "retry_execution"},
+            }
+            errs = validate_entry(draft)
+            tag = "草稿有效" if not errs else f"草稿待补字段: {errs}"
+            print(f"  - {exp_id} [{args.route}] {tag}")
+    print("\n下一步：运行 vl loop 前先登记 failure_ledger 条目")
+    return EXIT_BLOCKED
 
 
 def cmd_budget(args) -> int:
-    """预算硬阻断检查（Phase 1 实现）。"""
-    print("[budget] 预算检查：Phase 1 待实现")
+    """预算硬阻断检查；超限退出码 3，≥70% 告警。"""
+    from orchestrator.gates import load_project
+
+    workspace = Path(args.path)
+    try:
+        project = load_project(workspace)
+    except FileNotFoundError as exc:
+        print(f"[ERROR] {exc}")
+        return EXIT_ERROR
+
+    budget = project.get("token_budget") or {}
+    total = budget.get("total") or {}
+    cap = float(total.get("cap") or 0)
+    used = float(total.get("used") or 0)
+    ratio = (used / cap) if cap else 0.0
+
+    if cap and used >= cap:
+        print("[HARD_BLOCK] 预算已耗尽，暂停会话；恢复选项：")
+        print("  A. 人工批准追加预算（+20%）")
+        print("  B. 切换廉价模型继续（质量可能下降）")
+        print("  C. 手动介入完成剩余工作")
+        return EXIT_HARD_BLOCK
+    if ratio >= 0.7:
+        print(f"[SOFT_WARNING] 预算使用率 {ratio:.0%}（{used:.0f}/{cap:.0f}）")
+        return EXIT_OK
+    print(f"[budget] 使用率 {ratio:.0%}（{used:.0f}/{cap:.0f}），正常")
     return EXIT_OK
 
 
@@ -169,10 +230,17 @@ def build_parser() -> argparse.ArgumentParser:
     sp.set_defaults(func=cmd_gate)
 
     sp = sub.add_parser("loop", help="失败回流检查")
+    sp.add_argument("--path", default=".", help="Workspace 目录")
+    sp.add_argument(
+        "--route",
+        choices=list(CATEGORIES),
+        help="按指定失败分类生成路由建议（用于草稿验证）",
+    )
     sp.set_defaults(func=cmd_loop)
 
     sp = sub.add_parser("budget", help="预算硬阻断检查")
     sp.add_argument("action", nargs="?", default="check")
+    sp.add_argument("--path", default=".", help="Workspace 目录")
     sp.set_defaults(func=cmd_budget)
 
     sp = sub.add_parser("lock", help="制品写锁")

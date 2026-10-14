@@ -1,0 +1,15 @@
+# Bundle 清单 — biomed（生物医学）L0 骨架
+# 仅声明 Skill 路径 / Preset Patch（可选）/ MCP 配置（可选）。
+# 加载逻辑由编排层实现（复制到 HAL 注册接口），不直接调用底座内核。
+name: "biomed"
+level: "L0"
+discipline: "biomed"
+description: "生物医学科研方法论约束：统计报告规范 + 文献综述结构"
+
+skills:
+  - skills/biomed-stats/SKILL.md
+  - skills/biomed-literature/SKILL.md
+
+# L0 阶段不引入 Preset 补丁与 MCP，避免过早复杂化（见 design-blueprint.md §2.6）
+preset_patch: null
+mcp: null

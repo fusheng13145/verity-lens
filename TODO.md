@@ -4,8 +4,20 @@
 
 ## 当前状态
 
-- **当前阶段**：Phase 0 已完成（HAL 实现 + 契约测试 + 门禁引擎 + 脚手架 + 前端骨架）
-- **下一步**：Phase 1 —— 失败驱动迭代模块（failure_loop 真实实现）+ biomed L0 Bundle
+- **当前阶段**：Phase 1 已完成（失败驱动迭代模块 + biomed L0 Bundle）
+- **下一步**：Phase 2 —— Bundle 工厂（`vl bundle new`）+ L1 Bundle ×2 + HYP/EPIS 回流完备
+
+## Phase 1：单学科端到端闭环 ✅ 2026-10-15
+
+- [x] 失败驱动迭代模块：`orchestrator/failure_loop.py`
+  - [x] 五类失败分类学（EXEC/DATA/METH/HYP/EPIS）与路由
+  - [x] failure_ledger 条目 Schema 校验（含 evidence 指针）
+  - [x] 确定性工具复核（功效/效应量/p 值，依赖缺失时降级）
+  - [x] 落盘：实验转终态 + 假设树置信度/状态更新 + ledger 追加 + lessons.md 渲染
+  - [x] 硬约束：未批准不回流；refuted 不可删；新假设须引用 F-xxx
+- [x] biomed L0 Bundle（bundle.yml + stats/literature SKILL + 术语表）
+- [x] CLI：`vl loop` 与 `vl budget check` 真实实现
+- [x] 测试：53 个用例全通过
 
 ## Phase 0：底座 + HAL 立桩（1–2 周）✅ 2026-10-15
 

@@ -6,9 +6,11 @@
 
 | Bundle | 级别 | 版本 | 状态 | Golden 用例 | 负责人 | 备注 |
 |--------|------|------|------|-------------|--------|------|
-| biomed | L0（目标 L1） | 0.1.0 | 规划中（Phase 1） | 待建 | 待定 | 首个学科，端到端闭环载体 |
-| materials | — | — | 未启动 | — | — | Phase 2 候选 |
-| compsci | — | — | 未启动 | — | — | Phase 2 候选 |
+| biomed | **L0** | 0.1.0 | ✅ 已交付（Phase 1，2026-10-15） | 待建 | 待定 | 首个学科；含 stats + literature 两个 SKILL，复用通用验证脚本，无 Preset Patch / MCP |
+| materials | — | — | 未启动 | — | — | Phase 2 候选，从 L0 起步 |
+| compsci | — | — | 未启动 | — | — | Phase 2 候选，从 L0 起步 |
+
+**biomed L0 交付内容**：`bundle.yml` + `skills/biomed-stats/SKILL.md`（效应量 + 95% CI + p 值强制规范）+ `skills/biomed-literature/SKILL.md`（证据等级 + 诊断效能指标）+ `skills/biomed-stats/references/biomed_terminology.json`（术语/规范/必报指标）。
 
 级别定义见 `design-blueprint.md` §Bundle 工厂（L0 骨架 / L1 可用 / L2 完备）。
 

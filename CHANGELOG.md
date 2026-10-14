@@ -2,6 +2,23 @@
 
 > 遵循 Keep a Changelog 风格，版本号 `MAJOR.MINOR.PATCH`。
 
+## [1.4.0] - 2026-10-15 — Phase 1 完成（失败驱动迭代闭环）
+
+### Added
+- **失败驱动迭代模块** `orchestrator/failure_loop.py`：
+  - 未处理 failed 检测（`find_unresolved_failures` / `check_loop`，阻塞后续阶段）
+  - 条目 Schema 校验（`validate_entry`，对齐 failure_ledger.schema.json）
+  - 确定性工具复核（`verify_with_sidecar`，依赖缺失时降级为 skipped）
+  - 五类路由（`route`）：EXEC→自动重试(≤3，超限升级 HITL)；DATA→补充数据+挂起；
+    METH→修订实验 exp_N+1；HYP→refuted/revised；EPIS→修订前提
+  - 决策落盘（`apply_decision`）：实验转终态 + 假设树状态/置信度更新 +
+    证据链写入 provenance.justified_by + ledger 追加 + lessons.md 渲染
+- **biomed L0 Bundle**：`bundles/biomed/`（bundle.yml + biomed-stats / biomed-literature
+  两份 SKILL.md + `references/biomed_terminology.json`）。
+- **CLI**：`vl loop`（扫描未处理失败，阻塞退出码 2，支持 `--route` 生成路由建议）
+  与 `vl budget check`（≥100% 硬阻断退出码 3，≥70% 告警）真实实现。
+- **测试**：53 个用例全通过（含五类路由、低置信度强制 HITL、重试上限升级、落盘一致性）。
+
 ## [1.3.0] - 2026-10-15 — Phase 0 完成
 
 ### Added
