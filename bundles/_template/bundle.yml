@@ -1,0 +1,10 @@
+# Bundle 清单（L0 骨架模板）
+# 仅声明 Skill 路径 / Preset Patch（可选）/ MCP 配置（可选）。
+# 加载逻辑由编排层实现（复制到 HAL 注册接口），不直接调用底座内核。
+name: "_template"
+level: "L0"
+discipline: "<discipline>"
+skills:
+  - skills/<discipline>-capability/SKILL.md
+preset_patch: null
+mcp: null

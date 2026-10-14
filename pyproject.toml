@@ -1,0 +1,27 @@
+[project]
+name = "verity-lens"
+version = "0.1.0"
+description = "VerityLens (真理之眼) — 科研全能 Agent 系统"
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic>=2",
+    "jsonschema",
+    "pyyaml",
+    "rich",
+    "typer",
+    "httpx",
+    "numpy",
+    "scipy",
+    "fastapi",
+    "uvicorn",
+]
+
+[project.scripts]
+vl = "orchestrator.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["hal", "orchestrator", "sidecar", "bundles", "skills"]

@@ -1,0 +1,10 @@
+# HAL 版本锁（Capability Lock）
+# 记录已验证的运行底座版本与能力集。底座升级须修改本文件并过 hal_contract 测试。
+verified_version: "2.4.0"
+capabilities:
+  trajectory_fork: true
+  preset_patch: true
+  subagent: true
+  mcp: true
+  session_log_export: true
+known_differences: []

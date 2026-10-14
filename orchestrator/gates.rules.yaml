@@ -1,0 +1,29 @@
+# 阶段门禁声明式规则表（专家可读可改）
+# 由 orchestrator/gates.py 纯函数消费，pre_session hook 在每次会话启动前调用。
+# 详见 docs/interfaces.md 与 design-blueprint.md §2.3。
+gates:
+  literature:
+    entry_requires: []
+  question:
+    entry_requires:
+      - file: docs/literature_notes.md
+        check: non_empty
+      - file: docs/hypothesis_tree.json
+        check: schema_valid
+      - condition: "hypotheses.len >= 1 and all(h.statement != '')"
+    hitl_required: true
+  experiment:
+    entry_requires:
+      - condition: "current_phase == 'question'"
+      - condition: "approvals.question.approved_by != null"
+      - file: experiments/exp_*.yaml
+        check: "count >= 1 and schema_valid"
+  analysis:
+    entry_requires:
+      - condition: "all(experiments.status in ['completed','concluded_failed','abandoned'])"
+  writing:
+    entry_requires:
+      - file: analysis/summary.md
+        check: non_empty
+      - condition: "all(figures.generated)"
+    hitl_required: true

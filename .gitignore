@@ -1,0 +1,29 @@
+# ── Python ──
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+
+# ── Node / frontend ──
+web/node_modules/
+web/dist/
+web/.vite/
+
+# ── Agent & runtime data ──
+.workbuddy/
+.dsh/
+workspaces/
+
+# ── Secrets / env ──
+.env
+.env.*
+*.local
+
+# ── OS ──
+.DS_Store
+Thumbs.db
