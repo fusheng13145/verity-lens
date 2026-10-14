@@ -2,6 +2,21 @@
 
 > 遵循 Keep a Changelog 风格，版本号 `MAJOR.MINOR.PATCH`。
 
+## [1.5.0] - 2026-10-15 — Phase 2 完成（领域包化 + 级联回流）
+
+### Added
+- **Bundle 工厂** `orchestrator/bundle_factory.py`（由占位改为可用）：
+  - `new_bundle(discipline, target_dir, capability)`：复制 `_template/`、替换
+    `${DISCIPLINE}` / `${CAPABILITY}` 占位符、重命名 Skill 目录为 `<discipline>-<capability>`
+  - `validate_bundle(dir)`：结构校验（必填字段 / level 枚举 / 声明 Skill 存在性）
+  - `INTERVIEW_TEMPLATE`：领域专家访谈提纲（新增 `vl bundle --interview` 输出）
+- **L0 模板** `bundles/_template/`：bundle.yml + `skills/capability/SKILL.md`（含 TODO 占位）。
+- **biomed 升级至 L1**：新增 `skills/biomed-stats/scripts/validate_report.py`
+  确定性校验（缺失字段 / CI 区间合法性 / p 值 0–1 / 需 CI 指标）。
+- **级联回流** `cascade_impact()`：根假设证伪/放弃时，沿 children 链传播——
+  派生假设置 `revised`、其下实验置 `abandoned`，并写 `cascade_note` 留存影响来源。
+- **测试**：65 个用例全通过（新增 12 个：Bundle 工厂 + 级联回流）。
+
 ## [1.4.0] - 2026-10-15 — Phase 1 完成（失败驱动迭代闭环）
 
 ### Added

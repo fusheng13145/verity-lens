@@ -203,8 +203,37 @@ def cmd_lock(args) -> int:
 
 
 def cmd_bundle(args) -> int:
-    """Bundle 生成（Phase 2 实现）。"""
-    print(f"[bundle] {args.action} {args.discipline}：Phase 2 待实现")
+    """生成学科 L0 Bundle 骨架，或校验已有 Bundle 结构。"""
+    from orchestrator.bundle_factory import (
+        BundleExistsError,
+        INTERVIEW_TEMPLATE,
+        new_bundle,
+        validate_bundle,
+    )
+
+    if args.interview:
+        print(INTERVIEW_TEMPLATE)
+        return EXIT_OK
+
+    if args.action == "validate":
+        problems = validate_bundle(Path(args.discipline))
+        if problems:
+            print(f"[BLOCKED] Bundle 结构不合规（{len(problems)} 项）：")
+            for i, msg in enumerate(problems, 1):
+                print(f"  {i}. {msg}")
+            return EXIT_BLOCKED
+        print("[PASS] Bundle 结构合规")
+        return EXIT_OK
+
+    # action == new
+    try:
+        dest = new_bundle(args.discipline, args.path, capability=args.capability)
+    except (BundleExistsError, FileNotFoundError) as exc:
+        print(f"[ERROR] {exc}")
+        return EXIT_ERROR
+    print(f"[bundle] 已生成 L0 骨架: {dest}")
+    print(f"[bundle] Skill: {dest / 'skills' / (args.discipline + '-' + args.capability) / 'SKILL.md'}")
+    print("下一步：请领域专家填写 SKILL.md 中的 TODO 部分")
     return EXIT_OK
 
 
@@ -248,9 +277,22 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("artifact")
     sp.set_defaults(func=cmd_lock)
 
-    sp = sub.add_parser("bundle", help="生成学科 Bundle")
-    sp.add_argument("action", nargs="?", default="new")
-    sp.add_argument("discipline")
+    sp = sub.add_parser("bundle", help="生成 / 校验学科 Bundle")
+    sp.add_argument(
+        "action",
+        nargs="?",
+        default="new",
+        choices=["new", "validate"],
+        help="new=生成 L0 骨架；validate=校验结构",
+    )
+    sp.add_argument(
+        "discipline",
+        nargs="?",
+        help="学科标识；validate 时传 Bundle 目录路径（--interview 时可省略）",
+    )
+    sp.add_argument("--path", default="bundles", help="Bundle 根目录（new 时）")
+    sp.add_argument("--capability", default="core", help="首个 Skill 的能力名（new 时）")
+    sp.add_argument("--interview", action="store_true", help="输出领域专家访谈提纲")
     sp.set_defaults(func=cmd_bundle)
 
     sp = sub.add_parser("finalize", help="收尾导出")

@@ -228,7 +228,55 @@ def _next_experiment_id(entry: dict) -> str:
     return f"exp_{int(digits) + 1:03d}"
 
 
-# ── 落盘：应用回流决策 ────────────────────────────────────────────────
+# ── 级联回流 ──────────────────────────────────────────────────────────
+
+# 根假设终态 → 派生子节点应置的状态
+CASCADE_RULES: dict[str, dict[str, str]] = {
+    "refuted": {"hypothesis": "revised", "experiment": "abandoned"},
+    "abandoned": {"hypothesis": "abandoned", "experiment": "abandoned"},
+}
+
+CASCADING_STATUSES = tuple(CASCADE_RULES)
+
+
+def cascade_impact(tree: dict, root_id: str, root_status: str) -> list[str]:
+    """级联更新派生子节点（EPIS / HYP 回流时使用）。
+
+    当某假设被证伪（refuted）或放弃（abandoned）时，沿 children 链传播影响：
+    派生假设标记为需修订（revised），其下实验标记为放弃（abandoned），
+    并写入 cascade_note 留存影响来源。
+
+    :return: 受影响的派生节点 id 列表（不含 root_id）
+    """
+    if root_status not in CASCADE_RULES:
+        return []
+
+    nodes = {n.get("id"): n for n in tree.get("nodes", []) if n.get("id")}
+    if root_id not in nodes:
+        return []
+
+    rules = CASCADE_RULES[root_status]
+    affected: list[str] = []
+    queue = list(nodes[root_id].get("children") or [])
+    seen = {root_id}
+
+    while queue:
+        cid = queue.pop(0)
+        if cid in seen or cid not in nodes:
+            continue
+        seen.add(cid)
+        node = nodes[cid]
+        target = rules.get(node.get("type"))
+        if target:
+            node["status"] = target
+            node["cascade_note"] = f"源假设 {root_id} 已 {root_status}，本节点需复核"
+            affected.append(cid)
+        queue.extend(node.get("children") or [])
+
+    return affected
+
+
+# ── 落盘：应用回流决策 ──────────────────────────────────────────────
 
 def apply_decision(workspace: Path, entry: dict) -> dict:
     """校验 → 路由 → 更新实验状态/假设树 → 追加 ledger → 渲染 lessons。"""
@@ -259,18 +307,22 @@ def apply_decision(workspace: Path, entry: dict) -> dict:
     # 2) 更新假设树
     tree = load_tree(workspace)
     impact = (entry.get("decision") or {}).get("hypothesis_impact") or {}
+    cascaded: list[str] = []
     for node in tree.get("nodes", []):
         node_id = node.get("id")
         if node_id == entry.get("hypothesis_id") and node_id in impact:
             patch = impact[node_id] or {}
+            new_status = patch.get("status")
             if "status" in patch:
-                node["status"] = patch["status"]
+                node["status"] = new_status
             if "confidence_change" in patch:
                 base = node.get("confidence") or 0.0
                 node["confidence"] = _clamp(base + float(patch["confidence_change"]))
             entry_id = entry.get("id")
             if entry_id and entry_id not in (node.get("provenance") or {}).get("justified_by", []):
                 node.setdefault("provenance", {}).setdefault("justified_by", []).append(entry_id)
+            if new_status in CASCADING_STATUSES:
+                cascaded.extend(cascade_impact(tree, node_id, new_status))
     tree.setdefault("metadata", {})["version"] = int(tree.get("metadata", {}).get("version") or 0) + 1
     tree.setdefault("metadata", {})["updated_at"] = datetime.now(timezone.utc).isoformat()
     _write_json(workspace / TREE_REL, tree)
@@ -292,6 +344,7 @@ def apply_decision(workspace: Path, entry: dict) -> dict:
         "escalate": routing.escalate,
         "reason": routing.reason,
         "tree_version": tree.get("metadata", {}).get("version"),
+        "cascaded_nodes": cascaded,
     }
 
 

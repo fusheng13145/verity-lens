@@ -1,10 +1,15 @@
-# Bundle 清单（L0 骨架模板）
-# 仅声明 Skill 路径 / Preset Patch（可选）/ MCP 配置（可选）。
-# 加载逻辑由编排层实现（复制到 HAL 注册接口），不直接调用底座内核。
-name: "_template"
+# Bundle 清单（L0 骨架模板 — 由 `vl bundle new` 复制并替换占位符）
+# 占位符：${DISCIPLINE} / ${CAPABILITY}
+# 约束：只声明 Skill / Preset Patch / MCP，不调用底座内核
+#       加载逻辑由编排层实现（复制到 HAL 注册接口）
+name: "${DISCIPLINE}"
 level: "L0"
-discipline: "<discipline>"
+discipline: "${DISCIPLINE}"
+description: "TODO: 一句话描述该学科包覆盖的方法论范围"
+
 skills:
-  - skills/<discipline>-capability/SKILL.md
+  - skills/${DISCIPLINE}-${CAPABILITY}/SKILL.md
+
+# L0 不引入 Preset 补丁与 MCP；升级到 L2 时再补
 preset_patch: null
 mcp: null

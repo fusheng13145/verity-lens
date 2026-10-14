@@ -4,8 +4,19 @@
 
 ## 当前状态
 
-- **当前阶段**：Phase 1 已完成（失败驱动迭代模块 + biomed L0 Bundle）
-- **下一步**：Phase 2 —— Bundle 工厂（`vl bundle new`）+ L1 Bundle ×2 + HYP/EPIS 回流完备
+- **当前阶段**：Phase 2 已完成（Bundle 工厂 + biomed 升 L1 + HYP/EPIS 级联回流）
+- **下一步**：Phase 3 —— 容器沙箱 + RAG 侧车完整版 + 制品写锁 + Git 分支协作流
+
+## Phase 2：领域包化 + 失败闭环完备 ✅ 2026-10-15
+
+- [x] 重构 `orchestrator/bundle_factory.py`：
+  - [x] `new_bundle(discipline, target, capability)` 生成 L0 骨架（复制模板 + 占位符替换 + Skill 目录重命名）
+  - [x] `validate_bundle(dir)` 结构校验（必填字段 / level 枚举 / Skill 存在性）
+  - [x] `INTERVIEW_TEMPLATE` 领域专家访谈提纲
+- [x] L0 模板 `bundles/_template/`（bundle.yml + skills/capability/SKILL.md）
+- [x] biomed 升 **L1**：新增 `skills/biomed-stats/scripts/validate_report.py`（确定性校验：必填字段 / CI 合法性 / p 值范围 / 需 CI 的指标）
+- [x] 级联回流：`cascade_impact()` 沿 children 链传播（根证伪 → 派生假设 revised / 实验 abandoned，写 cascade_note）
+- [x] 测试：65 个用例全通过
 
 ## Phase 1：单学科端到端闭环 ✅ 2026-10-15
 
