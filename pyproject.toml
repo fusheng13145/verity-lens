@@ -25,3 +25,9 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 packages = ["hal", "orchestrator", "sidecar", "bundles", "skills"]
+
+[tool.pytest.ini_options]
+# 收集两个测试根：tests/（L1-L3）与 hal/contract_tests/（L4）。
+# 使用 test_*.py 模式，避免误收集 sidecar/tools/stat_test.py 等工具文件。
+testpaths = ["tests", "hal/contract_tests"]
+python_files = ["test_*.py"]

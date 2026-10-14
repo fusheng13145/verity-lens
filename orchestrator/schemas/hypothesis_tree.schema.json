@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://verity-lens/schemas/hypothesis_tree.schema.json",
+  "title": "VerityLens 假设树",
+  "description": "假设/实验节点树。parent_id 不得成环（由代码校验，见 gates.py validate_acyclic）。",
+  "type": "object",
+  "required": ["root_question", "nodes"],
+  "properties": {
+    "root_question": { "type": "string" },
+    "nodes": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/node" }
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "created_at": { "type": ["string", "null"] },
+        "updated_at": { "type": ["string", "null"] },
+        "version": { "type": "integer", "minimum": 0 }
+      }
+    }
+  },
+  "x-verity-lens-acyclic": true,
+  "$defs": {
+    "node": {
+      "type": "object",
+      "required": ["id", "type", "content", "status"],
+      "properties": {
+        "id": { "type": "string" },
+        "parent_id": { "type": ["string", "null"] },
+        "type": { "enum": ["hypothesis", "experiment"] },
+        "content": { "type": "string" },
+        "status": { "$ref": "#/$defs/status" },
+        "confidence": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+        "supporting_evidence": { "type": "array", "items": { "type": "string" } },
+        "linked_experiment": { "type": ["string", "null"] },
+        "children": { "type": "array", "items": { "type": "string" } },
+        "provenance": {
+          "type": "object",
+          "properties": {
+            "derived_from": { "type": ["string", "null"] },
+            "justified_by": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "引用的 failure_ledger 条目 ID"
+            },
+            "version": { "type": "integer", "minimum": 0 }
+          }
+        }
+      }
+    },
+    "status": {
+      "enum": ["proposed", "testing", "supported", "refuted", "revised", "abandoned"]
+    }
+  }
+}

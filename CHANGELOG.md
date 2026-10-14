@@ -2,6 +2,28 @@
 
 > 遵循 Keep a Changelog 风格，版本号 `MAJOR.MINOR.PATCH`。
 
+## [1.3.0] - 2026-10-15 — Phase 0 完成
+
+### Added
+- **HAL 适配层实现**：`hal/interface.py`（`HarnessAdapter` Protocol + `CAPABILITY_KEYS`）、
+  `hal/dsh_adapter.py`（`SessionHandle` / `ToolSpec` / `PresetPatch` / `SubagentSpec` + 子进程封装与优雅降级）、
+  `hal/capability_probe.py`（读 version_lock 探测能力）。
+- **数据 Schema**：`orchestrator/schemas/` 下四大 JSON Schema（research / hypothesis_tree / experiment / failure_ledger），
+  含假设树无环注解与终态枚举。
+- **编排层门禁引擎**：`orchestrator/gates.py` 纯函数（`load_project` / `compute_facts` / `check_file` / `check_gate` / `validate_acyclic`），
+  声明式命名事实 + 三段式缺失清单输出；CLI 实现 `vl init` / `vl gate`（含退出码 0/1/2）。
+- **Headless API**：`orchestrator/api.py`（FastAPI），供 Web 前端读取项目/阶段/假设树/实验/失败登记簿，
+  并支持 HITL 审批与失败登记（强制 `decision.approved_by`）。
+- **通用 Skill**：`skills/literature/SKILL.md`（含方法论约束与输出 Schema）。
+- **确定性工具**：`sidecar/tools/stat_test.py`（t 检验 / Welch / Mann-Whitney + Cohen's d + 95% CI）、
+  `sidecar/tools/doi_verify.py`（DOI 归一化 + Crossref 校验 + 网络降级）。
+- **测试**：36 个用例全通过（Layer1 Schema 校验 + Layer4 HAL 契约 + API 契约 + 门禁引擎）。
+- **工程**：`Makefile`（schema-check / golden / hal-contract-test / correctness / test / api / web）、
+  `pyproject.toml` 增加 pytest 配置（testpaths = tests, hal/contract_tests）。
+
+### Known Issues
+- `numpy` / `scipy` 未安装（网络慢），仅影响 `stat_test` 导入，Phase 1 前补装。
+
 ## [1.2.1] - 2026-10-14
 
 ### Added

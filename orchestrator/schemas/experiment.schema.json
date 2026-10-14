@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://verity-lens/schemas/experiment.schema.json",
+  "title": "VerityLens 实验配置",
+  "description": "单个实验的配置、执行与结果状态。failed 为临时态，必须经 failure_loop 转为终态。",
+  "type": "object",
+  "required": [
+    "experiment_id",
+    "parent_hypothesis",
+    "objective",
+    "status",
+    "success_criteria"
+  ],
+  "properties": {
+    "experiment_id": { "type": "string", "minLength": 1 },
+    "parent_hypothesis": { "type": "string", "minLength": 1 },
+    "objective": { "type": "string" },
+    "design": {
+      "type": "object",
+      "properties": {
+        "type": { "enum": ["simulation", "wet_lab", "clinical", "computational"] },
+        "parameters": { "type": "object" },
+        "controls": { "type": "array", "items": { "type": "string" } },
+        "random_seed": { "type": ["integer", "null"] }
+      }
+    },
+    "execution": {
+      "type": "object",
+      "properties": {
+        "runner": { "enum": ["hpc_submit", "local", "docker"] },
+        "command": { "type": "string" },
+        "input_files": { "type": "array", "items": { "type": "string" } },
+        "output_files": { "type": "array", "items": { "type": "string" } },
+        "timeout_seconds": { "type": "integer", "minimum": 1 },
+        "resources": { "type": "object" }
+      }
+    },
+    "success_criteria": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["metric", "condition", "threshold"],
+        "properties": {
+          "metric": { "type": "string" },
+          "condition": { "enum": [">=", "<=", ">", "<", "==", "!="] },
+          "threshold": { "type": ["number", "null"] },
+          "validation_script": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "status": {
+      "enum": [
+        "draft",
+        "running",
+        "completed",
+        "failed",
+        "concluded_failed",
+        "suspended",
+        "abandoned"
+      ]
+    },
+    "retry_count": { "type": "integer", "minimum": 0 },
+    "failure_ref": {
+      "type": ["string", "null"],
+      "description": "关联的 failure_ledger 条目 ID（终态必填）"
+    },
+    "superseded_by": { "type": ["string", "null"] },
+    "results": {
+      "type": "object",
+      "properties": {
+        "output_path": { "type": ["string", "null"] },
+        "validation_passed": { "type": ["boolean", "null"] },
+        "timestamp": { "type": ["string", "null"] }
+      }
+    }
+  }
+}

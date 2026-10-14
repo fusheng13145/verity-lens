@@ -7,6 +7,15 @@ from __future__ import annotations
 
 from typing import Iterator, Literal, Protocol, runtime_checkable
 
+# 能力探测返回的固定键集合（缺一不可，缺失即视为不支持）
+CAPABILITY_KEYS: tuple[str, ...] = (
+    "trajectory_fork",
+    "preset_patch",
+    "subagent",
+    "mcp",
+    "session_log_export",
+)
+
 
 @runtime_checkable
 class HarnessAdapter(Protocol):

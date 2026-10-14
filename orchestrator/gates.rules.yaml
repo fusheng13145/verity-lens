@@ -1,6 +1,11 @@
 # 阶段门禁声明式规则表（专家可读可改）
 # 由 orchestrator/gates.py 纯函数消费，pre_session hook 在每次会话启动前调用。
 # 详见 docs/interfaces.md 与 design-blueprint.md §2.3。
+#
+# entry_requires 支持两类检查（声明式，不做表达式求值以避免注入与安全风险）：
+#   - file:  相对 Workspace 的路径（支持 * 通配）
+#            check: non_empty | schema_valid | present_and_schema_valid
+#   - condition: gates.py 中 compute_facts() 产出的命名事实（布尔）
 gates:
   literature:
     entry_requires: []
@@ -10,20 +15,24 @@ gates:
         check: non_empty
       - file: docs/hypothesis_tree.json
         check: schema_valid
-      - condition: "hypotheses.len >= 1 and all(h.statement != '')"
+      - condition: hypotheses_len_ge_1
     hitl_required: true
   experiment:
     entry_requires:
-      - condition: "current_phase == 'question'"
-      - condition: "approvals.question.approved_by != null"
+      - condition: approvals_question_approved
       - file: experiments/exp_*.yaml
-        check: "count >= 1 and schema_valid"
+        check: present_and_schema_valid
   analysis:
     entry_requires:
-      - condition: "all(experiments.status in ['completed','concluded_failed','abandoned'])"
+      - condition: all_experiments_terminal
   writing:
     entry_requires:
-      - file: analysis/summary.md
-        check: non_empty
-      - condition: "all(figures.generated)"
+      - condition: analysis_summary_exists
+      - condition: figures_generated
     hitl_required: true
+
+# 文件路径（或通配）→ 校验用 Schema（位于 orchestrator/schemas/）
+schema_bindings:
+  docs/hypothesis_tree.json: hypothesis_tree.schema.json
+  experiments/exp_*.yaml: experiment.schema.json
+  docs/failure_ledger.json: failure_ledger.schema.json

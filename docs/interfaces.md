@@ -50,6 +50,24 @@ class HarnessAdapter(Protocol):
 | `vl bundle new` | `<discipline>` | 生成 L0 Bundle 骨架 | 0/1 |
 | `vl finalize` | — | manifest 汇总 + reproduce + 导出 | 0/1 |
 
+实现状态：Phase 0 已实现 `init` / `gate`；`loop` / `budget` / `lock` / `bundle` / `finalize` 按路线图在 Phase 1–3 落地，当前为占位并返回 0。
+
+## 2.1 Headless API 契约（供 Web 前端）
+
+前端（`web/`）**只**经 Headless API 与系统交互，不得直连底座或读写 Workspace 文件系统。启动：`uvicorn orchestrator.api:app --port 8000`；前端开发期经 Vite proxy 将 `/api` 转发到 `:8000`。
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/projects/{project_id}` | 项目元数据（RESEARCH.yaml：阶段/审批/预算/写锁/降级特性） |
+| GET | `/api/projects/{project_id}/phases` | 各阶段门禁状态 + 命名事实（阶段看板数据源） |
+| POST | `/api/projects/{project_id}/approve_phase` | HITL 审批，写入 `approvals[phase]`（approver + UTC 时间戳） |
+| GET | `/api/projects/{project_id}/hypothesis_tree` | 假设树（含 refuted/revised + provenance 证据链） |
+| GET | `/api/projects/{project_id}/experiments` | 实验列表与状态 |
+| GET | `/api/projects/{project_id}/failure_ledger` | 查看失败登记簿 |
+| POST | `/api/projects/{project_id}/failure_ledger` | 登记失败条目（HITL 强制：`decision.approved_by` 非空） |
+
+类型契约以 `orchestrator/schemas/*.json` 为单一真相；前端 `src/types/` 由其生成。
+
 ## 3. Sidecar 工具契约（注册为底座 tool）
 
 每个工具 MUST 提供：

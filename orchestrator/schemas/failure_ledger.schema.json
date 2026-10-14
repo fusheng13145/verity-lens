@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://verity-lens/schemas/failure_ledger.schema.json",
+  "title": "VerityLens 失败登记簿",
+  "description": "结构化记录每次实验失败的归因与决策，驱动假设树迭代。",
+  "type": "object",
+  "required": ["entries"],
+  "properties": {
+    "entries": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/entry" }
+    }
+  },
+  "$defs": {
+    "entry": {
+      "type": "object",
+      "required": [
+        "id",
+        "experiment_id",
+        "hypothesis_id",
+        "phase",
+        "detected_at",
+        "classification",
+        "decision"
+      ],
+      "properties": {
+        "id": { "type": "string", "pattern": "^F-[0-9]+$" },
+        "experiment_id": { "type": "string" },
+        "hypothesis_id": { "type": "string" },
+        "phase": {
+          "enum": ["literature", "question", "experiment", "analysis", "writing"]
+        },
+        "detected_at": { "type": "string" },
+        "classification": {
+          "type": "object",
+          "required": ["category", "code", "confidence"],
+          "properties": {
+            "category": { "enum": ["EXEC", "DATA", "METH", "HYP", "EPIS"] },
+            "code": { "type": "string", "minLength": 1 },
+            "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+            "rationale": { "type": "string" }
+          }
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "path": { "type": "string" },
+              "locator": { "type": ["string", "null"] },
+              "event": { "type": ["string", "null"] }
+            },
+            "required": ["path"]
+          }
+        },
+        "decision": {
+          "type": "object",
+          "required": ["type"],
+          "properties": {
+            "type": {
+              "enum": [
+                "retry_execution",
+                "supplement_data",
+                "revise_experiment",
+                "revise_hypothesis",
+                "abandon_hypothesis",
+                "revise_premise"
+              ]
+            },
+            "action": { "type": ["string", "null"] },
+            "changes": { "type": "array", "items": { "type": "string" } },
+            "hypothesis_impact": { "type": "object" },
+            "approved_by": { "type": ["string", "null"] },
+            "approved_at": { "type": ["string", "null"] }
+          }
+        },
+        "lesson": { "type": "string" },
+        "tags": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}

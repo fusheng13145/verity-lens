@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://verity-lens/schemas/research.schema.json",
+  "title": "VerityLens RESEARCH.yaml",
+  "description": "项目级元数据唯一真相源。阶段推进的唯一写入口。",
+  "type": "object",
+  "required": ["project_id", "discipline", "current_phase", "hypotheses", "token_budget"],
+  "properties": {
+    "project_id": { "type": "string", "minLength": 1 },
+    "title": { "type": "string" },
+    "discipline": { "type": "string", "minLength": 1 },
+    "research_question": { "type": "string" },
+    "current_phase": {
+      "enum": ["literature", "question", "experiment", "analysis", "writing"]
+    },
+    "approvals": {
+      "type": "object",
+      "description": "HITL 审批记录，key 为阶段名",
+      "additionalProperties": {
+        "type": ["object", "null"],
+        "properties": {
+          "approved_by": { "type": ["string", "null"] },
+          "approved_at": { "type": ["string", "null"] },
+          "note": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "locks": {
+      "type": "object",
+      "description": "制品写锁，key 为制品名，超时自动失效"
+    },
+    "degraded_features": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "HAL 能力探测后记录的降级特性"
+    },
+    "hypotheses": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/hypothesisRef" }
+    },
+    "model_config": {
+      "type": "object",
+      "properties": {
+        "primary": { "type": "string" },
+        "fallback": { "type": "string" }
+      }
+    },
+    "token_budget": { "$ref": "#/$defs/tokenBudget" }
+  },
+  "$defs": {
+    "hypothesisRef": {
+      "type": "object",
+      "required": ["id", "status"],
+      "properties": {
+        "id": { "type": "string" },
+        "status": {
+          "enum": ["proposed", "testing", "supported", "refuted", "revised", "abandoned"]
+        },
+        "confidence": { "type": ["number", "null"], "minimum": 0, "maximum": 1 }
+      }
+    },
+    "tokenBudget": {
+      "type": "object",
+      "required": ["total", "per_phase"],
+      "properties": {
+        "total": { "$ref": "#/$defs/budget" },
+        "per_phase": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/budget" }
+        }
+      }
+    },
+    "budget": {
+      "type": "object",
+      "required": ["cap", "used"],
+      "properties": {
+        "cap": { "type": "number", "minimum": 0 },
+        "used": { "type": "number", "minimum": 0 }
+      }
+    }
+  }
+}

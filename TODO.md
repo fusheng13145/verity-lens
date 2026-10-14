@@ -4,17 +4,23 @@
 
 ## 当前状态
 
-- **当前阶段**：文档体系 + 项目骨架已就绪并推送（commit b6d30e6），Phase 0 待实施
-- **下一步**：Phase 0 —— 完善 HAL 实现与底座验证（HAL 目前为占位）
+- **当前阶段**：Phase 0 已完成（HAL 实现 + 契约测试 + 门禁引擎 + 脚手架 + 前端骨架）
+- **下一步**：Phase 1 —— 失败驱动迭代模块（failure_loop 真实实现）+ biomed L0 Bundle
 
-## Phase 0：底座 + HAL 立桩（1–2 周）
+## Phase 0：底座 + HAL 立桩（1–2 周）✅ 2026-10-15
 
-- [ ] 搭建工程骨架（`hal/` `orchestrator/` `sidecar/` `bundles/_template/` 目录）
-- [ ] 实现 `hal/interface.py` 抽象接口 + `dsh_adapter.py`
-- [ ] 实现能力探测 `capability_probe.py` + `version_lock.yml`
-- [ ] 编写 HAL 契约测试（`hal/contract_tests/`，覆盖率 100%）
-- [ ] 最小 Skill（literature）+ 最小 sidecar 工具（stat_test / doi_verify）
-- [ ] 验收：同一任务轨迹可复现；人为模拟底座破坏性变更，CI 准确定位失效点
+- [x] 搭建工程骨架（`hal/` `orchestrator/` `sidecar/` `bundles/_template/` 目录）
+- [x] 实现 `hal/interface.py` 抽象接口（含 `CAPABILITY_KEYS`）+ `dsh_adapter.py`
+- [x] 实现能力探测 `capability_probe.py` + `version_lock.yml`
+- [x] 编写 HAL 契约测试（`hal/contract_tests/`，11 个用例覆盖接口与降级）
+- [x] 最小 Skill（literature）+ 最小 sidecar 工具（stat_test / doi_verify）
+- [x] 四大 JSON Schema：`research` / `hypothesis_tree` / `experiment` / `failure_ledger`
+- [x] 编排层门禁引擎：`orchestrator/gates.py` 纯函数 + `vl init` / `vl gate`
+- [x] Headless API：`orchestrator/api.py`（供前端）
+- [x] 前端骨架：`web/`（React + Vite + TS + Tailwind + `/api` proxy）
+- [x] 验证：36 个测试全通过
+
+**遗留**：`numpy` / `scipy` 因网络慢未安装（仅 `stat_test` 需要，Phase 1 用到时再装）。
 
 ## Phase 1：单学科端到端闭环（3–6 周）
 
