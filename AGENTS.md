@@ -7,7 +7,7 @@
 ```
 verity-lens/
 ├── AGENTS.md              # 本文件（代理硬规则入口）
-├── README.md              # 项目简介与快速开始（待补：见 TODO.md）
+├── README.md              # 项目简介与快速开始（已完成）
 ├── CHANGELOG.md           # 版本更新记录
 ├── TODO.md                # 开发计划与当前进度
 └── docs/                  # 文档体系（导航：docs/README.md）

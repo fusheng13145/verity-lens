@@ -2,6 +2,12 @@
 
 > 遵循 Keep a Changelog 风格，版本号 `MAJOR.MINOR.PATCH`。
 
+## [1.2.1] - 2026-10-14
+
+### Added
+- 初始化项目骨架并推送到 `git@github.com:fusheng13145/verity-lens.git`（commit b6d30e6）：后端 Python 骨架（`pyproject.toml` + hal/orchestrator/sidecar/bundles/skills/tests）、前端 `web/`（React+Vite+TS + tailwind v4 + `/api` proxy）、根目录 README/AGENTS/TODO/CHANGELOG、`.gitignore`/`.gitattributes`。
+- 根目录 `README.md`：项目简介、技术栈、仓库结构、后端/前端快速开始。
+
 ## [1.2.0] - 2026-10-14
 
 ### Added
