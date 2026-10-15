@@ -1,4 +1,4 @@
-# VerityLens（真理之眼）
+# verity-lens（真理之眼）
 
 > 科研全能 Agent 系统 —— 以 Agent 运行时（DeepSeek Harness）为底座，通过工程化约束（可复现、可审计、失败闭环）让 AI 可靠地参与"文献 → 假设 → 实验 → 分析 → 写作"全流程。
 
@@ -76,5 +76,5 @@ npm run dev                  # http://localhost:5173
 
 ## 状态
 
-- 当前阶段：**文档体系已就绪，代码骨架已初始化，Phase 0 待实施**（详见 [`TODO.md`](TODO.md)）。
+- 当前阶段：**核心闭环已落地（Phase 0–4b）** —— 文件即状态门禁、失败驱动迭代、学科包化（biomed / materials / compsci 三学科均 L1）、容器沙箱、RAG 侧车、制品写锁、Git 协作流、`vl finalize` 收尾闭环。详见 [`TODO.md`](TODO.md) 与 [`CHANGELOG.md`](CHANGELOG.md)。
 - 功能范围与成功指标见 [`docs/project-spec.md`](docs/project-spec.md)。

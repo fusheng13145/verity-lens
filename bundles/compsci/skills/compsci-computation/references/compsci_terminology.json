@@ -1,0 +1,63 @@
+{
+  "discipline": "compsci",
+  "terms": {
+    "SOTA": {
+      "definition": "State-Of-The-Art，当前已知最佳性能结果",
+      "constraint": "声明级(L3)须标注，未独立复现不得当作既定事实"
+    },
+    "baseline": {
+      "definition": "对照基线方法，用于证明新方法的增量价值",
+      "constraint": "须给出名称、数据集与可验证来源"
+    },
+    "random_seed": {
+      "definition": "随机种子，控制随机性来源（初始化、采样、数据划分）",
+      "constraint": "必须固定并记录；实验中须实际生效"
+    },
+    "n_runs": {
+      "definition": "独立重复实验次数",
+      "constraint": ">=3，报告均值±标准差"
+    },
+    "std": {
+      "definition": "标准差，量化重复实验的离散程度",
+      "constraint": "主指标必报，禁止仅报点估计"
+    },
+    "data_hash": {
+      "definition": "数据集内容的密码学哈希（如 sha256）",
+      "constraint": "与 code_hash 至少其一非空，确保可溯源"
+    },
+    "code_hash": {
+      "definition": "代码或提交快照的标识（如 git commit sha）",
+      "constraint": "与 data_hash 至少其一非空"
+    },
+    "ablation": {
+      "definition": "消融实验，逐一移除组件以证明贡献",
+      "constraint": "每项移除须独立报告指标变化"
+    },
+    "cross_validation": {
+      "definition": "交叉验证，缓解单次划分的偶然性",
+      "constraint": "须报告各折结果聚合（均值±标准差）"
+    },
+    "overfitting": {
+      "definition": "过拟合，训练集表现显著优于验证/测试集",
+      "constraint": "须报告训练/验证/测试三者差距"
+    },
+    "reproducibility": {
+      "definition": "可复现性，他人按记录可得到一致结论",
+      "constraint": "种子+环境+哈希齐备方视为可复现"
+    }
+  },
+  "must_report": [
+    "random_seed",
+    "n_runs (>=3)",
+    "std (均值±标准差)",
+    "environment",
+    "data_hash 或 code_hash",
+    "baseline 统计差异"
+  ],
+  "forbidden": [
+    "仅报单次最优/单跑结果",
+    "仅报点估计无不确定度",
+    "仅声称 SOTA 无基线溯源",
+    "隐式随机未固定种子"
+  ]
+}

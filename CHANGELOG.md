@@ -2,6 +2,26 @@
 
 > 遵循 Keep a Changelog 风格，版本号 `MAJOR.MINOR.PATCH`。
 
+## [1.8.0] - 2026-10-15 — Phase 4b（第三学科 + 命名统一）
+
+### Added
+- **第三学科 Bundle：compsci（计算机科学）L0→L1**：
+  - 由 `vl bundle new compsci --capability computation` 生成 L0 骨架，与 materials 对称；
+  - 填充 `compsci-computation` SKILL.md（可复现计算实验：固定随机种子 / n≥3 重复 / 环境记录 / 数据·代码哈希 / 均值±标准差 / 基线统计差异）+ `compsci-literature` SKILL.md（证据等级 L1–L3 / SOTA 溯源）；
+  - L1 验证脚本 `scripts/validate_experiment.py`（确定性：R1 种子 / R2 n≥3 / R3 环境 / R4 哈希 / R5 不确定度 / R6 基线差异）；
+  - 术语表 `references/compsci_terminology.json`；`bundle.yml` 升 L1 并声明两个 Skill；`vl bundle validate` 通过。
+- **biomed 正式升 L1**：`bundle.yml` level 字段由 L0 改为 L1（L1 校验脚本与 literature 早已具备，此前仅 level 字段未同步）。
+
+### Changed
+- `README.md`：项目名统一为 kebab-case `verity-lens（真理之眼）`，与包名 `pyproject.toml` 及目录一致。
+- `docs/bundle-registry.md`：compsci 登记为 L1 已交付；biomed 注明 Phase 4b 正式升 L1。
+
+### Tests
+- `tests/schema/test_bundle_factory.py`：新增 `test_three_disciplines_coexist`（biomed / materials / compsci 三学科并存、互不污染、结构合规）。
+- 全量 **101 个用例**通过（原 100 + 新增 1）。
+
+> 注：L2（专用 MCP 声明 + Preset Patch + Golden 用例）因运行底座（DSH）仍为骨架，留待底座真实化后推进；协作模型按蓝图"不预设方案"，待真实团队痛点反馈。
+
 ## [1.7.0] - 2026-10-15 — Phase 4a（学科扩展 + 收尾闭环）
 
 ### Added

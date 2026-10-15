@@ -6,7 +6,8 @@
 
 - **当前阶段**：Phase 4 进行中（扩展评估）
   - Phase 4a ✅ 2026-10-15：materials 学科包（L0→L1）+ `vl finalize` 真实收尾闭环 + 实验可复现元数据
-- **下一步**：Phase 4b（按需）—— L2 Bundle（biomed/materials 补 Preset Patch + MCP + Golden）+ 更多学科（compsci）+ 协作模型按实际需求重评估（不预设方案）
+  - Phase 4b ✅ 2026-10-15：compsci 第三学科（L0→L1）+ biomed 正式升 L1 + README 命名统一为 verity-lens
+- **下一步**：L2 Bundle（biomed/materials/compsci 补 Preset Patch + MCP + Golden，待 DSH 底座真实化）+ 协作模型按真实痛点重评估（不预设方案）
 
 ## Phase 4：扩展评估（按需）
 
@@ -15,9 +16,13 @@
   - [x] 实验可复现元数据：`experiment.schema.json` 新增可选 `reproducibility` 对象
   - [x] `vl finalize` 真实实现：终态/无未处理失败/analysis·figures 就绪 + 可复现元数据完整度 + 生成 finalize_report.md（含 AI 贡献声明草稿）
   - [x] 测试：100 个用例通过（新增 8）
-- [ ] **Phase 4b**（待启动，按真实需求）
-  - [ ] biomed / materials 升 L2：补 Preset Patch + MCP 声明 + Golden 用例
-  - [ ] 第三学科 compsci（从 L0 起步）
+- [x] **Phase 4b** — 第三学科 + 命名统一（2026-10-15）
+  - [x] 第三学科 compsci：由 `vl bundle new compsci --capability computation` 生成 L0，补 computation（L1 验证脚本：固定种子 / n≥3 / 环境 / 哈希 / 基线差异）/ literature SKILL + 术语表，升 L1，`vl bundle validate` 通过
+  - [x] biomed 正式升 L1（`bundle.yml` level 字段同步；L1 校验脚本与 literature 早已具备）
+  - [x] README 项目名统一为 kebab-case `verity-lens（真理之眼）`，与包名/目录一致
+  - [x] 测试：101 个用例通过（新增第三学科共存校验 1）
+- [ ] **Phase 4c**（待启动，依赖 DSH 底座真实化）
+  - [ ] biomed / materials / compsci 升 L2：补 Preset Patch + MCP 声明 + Golden 用例
   - [ ] 协作模型按真实痛点重评估（蓝图明确"不预设方案"，待 1–10 人团队实际协作反馈）
 
 ## Phase 3：健壮性与协作 ✅ 2026-10-15

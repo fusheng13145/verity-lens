@@ -1,0 +1,15 @@
+# Bundle 清单（compsci · L1）
+# 约束：只声明 Skill / Preset Patch / MCP，不调用底座内核
+#       加载逻辑由编排层实现（复制到 HAL 注册接口）
+name: "compsci"
+level: "L1"
+discipline: "compsci"
+description: "计算机科学 / 计算实验：可复现性方法论（固定种子 / ≥3 重复 / 环境记录 / 数据·代码哈希 / 基线统计差异）"
+
+skills:
+  - skills/compsci-computation/SKILL.md
+  - skills/compsci-literature/SKILL.md
+
+# L0 不引入 Preset 补丁与 MCP；升级到 L2 时再补
+preset_patch: null
+mcp: null

@@ -107,3 +107,25 @@ def test_materials_bundle_validates():
     materials = REPO_ROOT / "bundles" / "materials"
     problems = validate_bundle(materials)
     assert problems == [], problems
+
+
+def test_three_disciplines_coexist():
+    """Phase 4b：biomed / materials / compsci 三学科并存、互不污染、结构合规。"""
+    disciplines = {
+        "biomed": ("L1", {"biomed-stats", "biomed-literature"}),
+        "materials": ("L1", {"materials-characterization", "materials-literature"}),
+        "compsci": ("L1", {"compsci-computation", "compsci-literature"}),
+    }
+    seen_disciplines: set[str] = set()
+    for name, (level, skills) in disciplines.items():
+        d = REPO_ROOT / "bundles" / name
+        problems = validate_bundle(d)
+        assert problems == [], f"{name}: {problems}"
+        data = yaml.safe_load((d / "bundle.yml").read_text(encoding="utf-8"))
+        assert data["discipline"] == name
+        assert data["level"] == level
+        skill_dirs = {p.parent.name for p in d.glob("skills/*/SKILL.md")}
+        assert skill_dirs == skills, f"{name}: {skill_dirs}"
+        seen_disciplines.add(name)
+    # 三个不同学科，互不重名
+    assert seen_disciplines == {"biomed", "materials", "compsci"}
