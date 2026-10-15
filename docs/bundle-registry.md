@@ -6,11 +6,13 @@
 
 | Bundle | 级别 | 版本 | 状态 | Golden 用例 | 负责人 | 备注 |
 |--------|------|------|------|-------------|--------|------|
-| biomed | **L0** | 0.1.0 | ✅ 已交付（Phase 1，2026-10-15） | 待建 | 待定 | 首个学科；含 stats + literature 两个 SKILL，复用通用验证脚本，无 Preset Patch / MCP |
-| materials | — | — | 未启动 | — | — | Phase 2 候选，从 L0 起步 |
-| compsci | — | — | 未启动 | — | — | Phase 2 候选，从 L0 起步 |
+| biomed | **L1** | 0.2.0 | ✅ 已交付（Phase 1–2，2026-10-15） | 待建 | 待定 | 首个学科；stats + literature 两个 SKILL，含 L1 验证脚本，无 Preset Patch / MCP |
+| materials | **L1** | 0.1.0 | ✅ 已交付（Phase 4a，2026-10-15） | 待建 | 待定 | 第二学科；characterization（L1 验证脚本：不确定度 / n≥3 / 单位 / 仪器）+ literature；由 `vl bundle new` 生成 L0 后升 L1，验证"换 Bundle 即切换学科" |
+| compsci | — | — | 未启动 | — | — | 候选，从 L0 起步 |
 
-**biomed L0 交付内容**：`bundle.yml` + `skills/biomed-stats/SKILL.md`（效应量 + 95% CI + p 值强制规范）+ `skills/biomed-literature/SKILL.md`（证据等级 + 诊断效能指标）+ `skills/biomed-stats/references/biomed_terminology.json`（术语/规范/必报指标）。
+**biomed**：`bundle.yml` + `skills/biomed-stats/SKILL.md`（效应量 + 95% CI + p 值强制规范）+ `skills/biomed-literature/SKILL.md`（证据等级 + 诊断效能指标）+ `skills/biomed-stats/scripts/validate_report.py` + `references/biomed_terminology.json`。
+
+**materials（L0→L1）**：`bundle.yml` + `skills/materials-characterization/SKILL.md`（表征不确定度规范：不确定度必报 / n≥3 / 单位 / 仪器 / XRD·BET·Tauc 约束）+ `skills/materials-literature/SKILL.md`（实验 vs 计算证据 / 测试条件对齐）+ `skills/materials-characterization/scripts/validate_report.py` + `references/materials_terminology.json`。
 
 级别定义见 `design-blueprint.md` §Bundle 工厂（L0 骨架 / L1 可用 / L2 完备）。
 

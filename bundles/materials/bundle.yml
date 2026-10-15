@@ -1,0 +1,16 @@
+# Bundle 清单 — materials（材料科学）L1 可用
+# 仅声明 Skill 路径 / Preset Patch（可选）/ MCP 配置（可选）。
+# 加载逻辑由编排层实现（复制到 HAL 注册接口），不直接调用底座内核。
+name: "materials"
+level: "L1"
+discipline: "materials"
+description: "材料科学科研方法论约束：表征不确定度规范 + 文献综述结构（L0→L1）"
+
+skills:
+  - skills/materials-characterization/SKILL.md
+  - skills/materials-literature/SKILL.md
+
+# L0 不引入 Preset 补丁与 MCP，避免过早复杂化（见 design-blueprint.md §2.6）
+# 升级到 L2 时再补 preset_patch 与 mcp
+preset_patch: null
+mcp: null

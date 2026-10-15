@@ -60,6 +60,18 @@
         "abandoned"
       ]
     },
+    "reproducibility": {
+      "type": "object",
+      "description": "可复现性元数据（manifest），用于从 raw 数据到 figures 的复现（蓝图 §2.5.3 / §4.5）。可选但强烈建议终态实验填写。",
+      "properties": {
+        "model": { "type": ["string", "null"], "description": "生成/执行所用的模型版本" },
+        "tokens_used": { "type": ["integer", "null"], "minimum": 0 },
+        "random_seed": { "type": ["integer", "null"] },
+        "data_hash": { "type": ["string", "null"], "description": "输入数据（data/raw）的内容哈希" },
+        "environment": { "type": ["string", "null"], "description": "执行环境标识（镜像/commit/平台）" },
+        "generated_at": { "type": ["string", "null"], "description": "产物生成时间（ISO 8601）" }
+      }
+    },
     "retry_count": { "type": "integer", "minimum": 0 },
     "failure_ref": {
       "type": ["string", "null"],

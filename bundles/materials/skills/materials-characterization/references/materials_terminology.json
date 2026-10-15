@@ -1,0 +1,46 @@
+{
+  "version": "0.1.0",
+  "discipline": "materials",
+  "evidence_types": [
+    "experimental",
+    "computational",
+    "mixed"
+  ],
+  "characterization_methods": [
+    "xrd",
+    "sem",
+    "tem",
+    "xps",
+    "raman",
+    "bet",
+    "dsc",
+    "tga",
+    "uv_vis",
+    "ftir",
+    "nmr"
+  ],
+  "required_reporting_metrics": {
+    "xrd": ["crystal_phase", "pdf_card", "lattice_constant", "crystallite_size", "uncertainty"],
+    "bet": ["specific_surface_area", "relative_pressure_range", "uncertainty"],
+    "tauc_bandgap": ["bandgap", "transition_type", "uncertainty"],
+    "general": ["value", "uncertainty", "unit", "n_repeats"]
+  },
+  "terms": {
+    "XRD": "X 射线衍射（X-ray diffraction，物相与晶态分析）",
+    "BET": "Brunauer-Emmett-Teller 比表面积理论",
+    "SEM": "扫描电子显微镜（Scanning Electron Microscopy）",
+    "TEM": "透射电子显微镜（Transmission Electron Microscopy）",
+    "XPS": "X 射线光电子能谱（X-ray Photoelectron Spectroscopy）",
+    "MOF": "金属有机框架（Metal-Organic Framework）",
+    "Scherrer": "Debye-Scherrer 公式，由衍射峰宽估算晶粒尺寸",
+    "Tauc": "Tauc 作图法，外推获得光学带隙",
+    "PDF": "粉末衍射卡片（Powder Diffraction File，ICDD 发布）",
+    "PCE": "光电转换效率（Power Conversion Efficiency）"
+  },
+  "naming_conventions": {
+    "experiment": "exp_<NNN>.yaml",
+    "hypothesis": "H<n>[.<n>]",
+    "failure_entry": "F-<NNN>",
+    "sample": "M-<NNN>"
+  }
+}

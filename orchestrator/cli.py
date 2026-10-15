@@ -2,7 +2,10 @@
 
 仅依赖标准库，保证在未安装第三方依赖时也能打印帮助。
 已实现（Phase 0）：init / gate
-按路线图待实现（Phase 1-3）：loop / budget / lock / bundle（Phase 2）/ finalize
+Phase 1：loop / budget
+Phase 2：bundle（工厂 + 校验）
+Phase 3：lock / sandbox / branch
+Phase 4：finalize（真实收尾闭环，含可复现元数据校验）
 """
 from __future__ import annotations
 
@@ -294,9 +297,20 @@ def cmd_bundle(args) -> int:
 
 
 def cmd_finalize(args) -> int:
-    """收尾导出（Phase 1 实现）。"""
-    print("[finalize] 收尾导出：Phase 1 待实现")
-    return EXIT_OK
+    """收尾校验与导出：门禁终态 + 可复现元数据完整度 + AI 贡献声明。
+
+    就绪退出码 0；存在阻塞项退出码 2（便于 pre_session / CI 判定）。
+    """
+    from orchestrator.finalize import run_finalize
+
+    workspace = Path(args.path)
+    report = run_finalize(workspace, write_report=True)
+    print(report.report_text)
+    if report.ready:
+        print(f"\n[finalize] 已生成 finalize_report.md（status=ready）")
+        return EXIT_OK
+    print(f"\n[BLOCKED] 收尾前置条件未满足（{len(report.blockers)} 项），见上方「遗留项」")
+    return EXIT_BLOCKED
 
 
 def cmd_branch(args) -> int:
@@ -418,7 +432,8 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--interview", action="store_true", help="输出领域专家访谈提纲")
     sp.set_defaults(func=cmd_bundle)
 
-    sp = sub.add_parser("finalize", help="收尾导出")
+    sp = sub.add_parser("finalize", help="收尾校验与导出")
+    sp.add_argument("--path", default=".", help="Workspace 目录")
     sp.set_defaults(func=cmd_finalize)
 
     sp = sub.add_parser("sandbox", help="生成容器沙箱 compose")

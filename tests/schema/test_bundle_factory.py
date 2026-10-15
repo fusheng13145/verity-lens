@@ -1,7 +1,7 @@
-"""Bundle 工厂测试（Phase 2）。
+"""Bundle 工厂测试（Phase 2 / Phase 4a）。
 
 覆盖：L0 骨架生成、占位符替换、空目录/模板目录占位保留、
-重复创建拒绝、已有 Bundle 结构校验。
+重复创建拒绝、已有 Bundle 结构校验、第二学科可生成并校验（换 Bundle 即切换学科）。
 """
 from __future__ import annotations
 
@@ -19,6 +19,8 @@ from orchestrator.bundle_factory import (
     new_bundle,
     validate_bundle,
 )
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 def test_template_exists():
@@ -88,3 +90,20 @@ def test_validate_bundle_bad_level(tmp_path):
     data["level"] = "L9"
     m.write_text(yaml.safe_dump(data, allow_unicode=True, sort_keys=False), encoding="utf-8")
     assert any("level 非法" in x for x in validate_bundle(dest))
+
+
+def test_factory_supports_multiple_disciplines(tmp_path):
+    """换 Bundle 即切换学科：不同学科均可由同一模板生成并通过结构校验。"""
+    d1 = new_bundle("chem", tmp_path, capability="spectro")
+    d2 = new_bundle("physics", tmp_path, capability="sim")
+    assert validate_bundle(d1) == []
+    assert validate_bundle(d2) == []
+    assert (d1 / "skills" / "chem-spectro" / "SKILL.md").exists()
+    assert (d2 / "skills" / "physics-sim" / "SKILL.md").exists()
+
+
+def test_materials_bundle_validates():
+    """锁定仓库内已交付的 materials L1 Bundle 结构合规。"""
+    materials = REPO_ROOT / "bundles" / "materials"
+    problems = validate_bundle(materials)
+    assert problems == [], problems

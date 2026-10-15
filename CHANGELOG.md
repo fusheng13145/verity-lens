@@ -2,6 +2,30 @@
 
 > 遵循 Keep a Changelog 风格，版本号 `MAJOR.MINOR.PATCH`。
 
+## [1.7.0] - 2026-10-15 — Phase 4a（学科扩展 + 收尾闭环）
+
+### Added
+- **第二学科 Bundle：materials（材料科学）L0→L1**：
+  - 由 `vl bundle new materials --capability characterization` 生成 L0 骨架，验证"换 Bundle 即切换学科"；
+  - 填充 `materials-characterization` SKILL.md（表征不确定度规范：不确定度必报 / n≥3 / 单位 / 仪器 / XRD·BET·Tauc 约束）+ `materials-literature` SKILL.md（实验 vs 计算证据、测试条件对齐）；
+  - L1 验证脚本 `scripts/validate_report.py`（确定性：不确定度合法、n≥3、单位非空、方法非空）；
+  - 术语表 `references/materials_terminology.json`；`bundle.yml` 升 L1 并声明两个 Skill；`vl bundle validate` 通过。
+- **实验可复现元数据**：`experiment.schema.json` 新增可选 `reproducibility` 对象（model / tokens_used / random_seed / data_hash / environment / generated_at），支撑 manifest 概念（蓝图 §2.5.3 / §4.5）。
+- **`vl finalize` 真实收尾闭环** `orchestrator/finalize.py`：
+  - 收尾前置校验：全部实验终态 + 无未处理失败实验 + analysis/summary.md 就绪 + figures 就绪；
+  - 可复现性完整度：completed 实验须带齐 model / data_hash / random_seed，否则阻断（科研诚信：无 manifest 无法复现）；
+  - 生成 `finalize_report.md`（门禁状态 / 可复现性 / AI 贡献声明草稿 / 遗留项）；就绪退出码 0，阻塞退出码 2。
+
+### Changed
+- `orchestrator/cli.py`：`cmd_finalize` 由占位桩替换为真实实现，并补 `--path` 参数。
+- `docs/bundle-registry.md`：materials 登记为 L1 已交付；biomed 标注为 L1。
+- `docs/interfaces.md`：CLI 契约表补全 `lock` / `bundle validate` / `finalize` / `sandbox` / `branch`，并标注各命令实现状态。
+
+### Tests
+- `tests/schema/test_bundle_factory.py`：新增"第二学科可生成并校验" + 锁定 materials Bundle 结构合规（共 +2）。
+- `tests/finalize/test_finalize.py`：新增 6 例（ready / 缺 summary / 缺 figure / 未处理 failed / 缺可复现元数据 / 报告落盘）。
+- 全量 **100 个用例**通过（原 92 + 新增 8）。
+
 ## [1.6.0] - 2026-10-15 — Phase 3 完成（健壮性与协作）
 
 ### Added

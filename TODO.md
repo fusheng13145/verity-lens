@@ -4,8 +4,21 @@
 
 ## 当前状态
 
-- **当前阶段**：Phase 3 已完成（容器沙箱 + RAG 侧车完整版 + 制品写锁 + Git 分支协作流）
-- **下一步**：Phase 4（按需）—— L2 Bundle + 更多学科 + 协作模型按实际需求重评估
+- **当前阶段**：Phase 4 进行中（扩展评估）
+  - Phase 4a ✅ 2026-10-15：materials 学科包（L0→L1）+ `vl finalize` 真实收尾闭环 + 实验可复现元数据
+- **下一步**：Phase 4b（按需）—— L2 Bundle（biomed/materials 补 Preset Patch + MCP + Golden）+ 更多学科（compsci）+ 协作模型按实际需求重评估（不预设方案）
+
+## Phase 4：扩展评估（按需）
+
+- [x] **Phase 4a** — 学科扩展 + 收尾闭环（2026-10-15）
+  - [x] 第二学科 materials：由 `vl bundle new` 生成 L0，补 characterization（L1 验证脚本）/ literature SKILL + 术语表，升 L1，`vl bundle validate` 通过
+  - [x] 实验可复现元数据：`experiment.schema.json` 新增可选 `reproducibility` 对象
+  - [x] `vl finalize` 真实实现：终态/无未处理失败/analysis·figures 就绪 + 可复现元数据完整度 + 生成 finalize_report.md（含 AI 贡献声明草稿）
+  - [x] 测试：100 个用例通过（新增 8）
+- [ ] **Phase 4b**（待启动，按真实需求）
+  - [ ] biomed / materials 升 L2：补 Preset Patch + MCP 声明 + Golden 用例
+  - [ ] 第三学科 compsci（从 L0 起步）
+  - [ ] 协作模型按真实痛点重评估（蓝图明确"不预设方案"，待 1–10 人团队实际协作反馈）
 
 ## Phase 3：健壮性与协作 ✅ 2026-10-15
 

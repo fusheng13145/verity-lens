@@ -46,11 +46,14 @@ class HarnessAdapter(Protocol):
 | `vl gate` | `<phase>` | 校验阶段准入，输出缺失清单 | 0(放行)/2(阻塞) |
 | `vl loop` | — | 扫描 failed 实验，校验/执行回流 | 0/2 |
 | `vl budget check` | — | 读 token_budget，超限报 HARD_BLOCK | 0/3(硬阻断) |
-| `vl lock` | `<acquire\|release> <artifact>` | 管理制品写锁 | 0/4(冲突) |
+| `vl lock` | `<acquire\|release\|check> <artifact>` | 管理制品写锁 | 0/2(冲突) |
 | `vl bundle new` | `<discipline>` | 生成 L0 Bundle 骨架 | 0/1 |
-| `vl finalize` | — | manifest 汇总 + reproduce + 导出 | 0/1 |
+| `vl bundle validate` | `<bundle_dir>` | 校验 Bundle 结构合规 | 0/2 |
+| `vl finalize` | `--path <ws>` | 收尾校验：全实验终态 + 无未处理失败 + analysis/figures 就绪 + 可复现元数据完整度；生成 finalize_report.md | 0(ready)/2(blocked) |
+| `vl sandbox` | `<project_id>` | 生成/校验容器沙箱 compose | 0/2 |
+| `vl branch` | `<create\|merge\|status>` | Git 假设分支协作 | 0/2 |
 
-实现状态：Phase 0 已实现 `init` / `gate`；`loop` / `budget` / `lock` / `bundle` / `finalize` 按路线图在 Phase 1–3 落地，当前为占位并返回 0。
+实现状态：Phase 0 实现 `init` / `gate`；Phase 1 实现 `loop` / `budget`；Phase 2 实现 `bundle`（工厂 + 校验）；Phase 3 实现 `lock` / `sandbox` / `branch`；Phase 4a 实现 `finalize`（真实收尾闭环，含可复现元数据校验）。
 
 ## 2.1 Headless API 契约（供 Web 前端）
 
