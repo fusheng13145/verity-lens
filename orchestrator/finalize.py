@@ -201,7 +201,7 @@ def _render_report(
     lines.append("## 3. AI 贡献声明草稿")
     lines.append("")
     lines.append(
-        "本研究在 VerityLens（真理之眼）科研 Agent 辅助下完成。AI 参与了"
+        "本研究在 verity-lens（真理之眼）科研 Agent 辅助下完成。AI 参与了"
         "文献检索与综述起草、实验设计门禁校验、统计与表征数值的确定性复算、"
         "失败归因与假设迭代建议。**所有结论的最终科学判断、数据解释与发表决策"
         "均由人类研究者（PI）负责。** 模型版本、token 消耗与随机种子见各实验"

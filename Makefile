@@ -1,4 +1,4 @@
-# VerityLens 常用任务（与 docs/interfaces.md、AGENTS.md、testing.md 中的命令一致）
+# verity-lens 常用任务（与 docs/interfaces.md、AGENTS.md、testing.md 中的命令一致）
 # 用法：make <target>
 
 PY      ?= python

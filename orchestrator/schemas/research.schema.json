@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://verity-lens/schemas/research.schema.json",
-  "title": "VerityLens RESEARCH.yaml",
+  "title": "verity-lens RESEARCH.yaml",
   "description": "项目级元数据唯一真相源。阶段推进的唯一写入口。",
   "type": "object",
   "required": ["project_id", "discipline", "current_phase", "hypotheses", "token_budget"],

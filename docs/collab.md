@@ -1,6 +1,6 @@
 # 协作与制品管理
 
-> 对应设计蓝图 `docs/design-blueprint.md` §2.5。VerityLens 的协作以**制品（文件与实验产物）
+> 对应设计蓝图 `docs/design-blueprint.md` §2.5。verity-lens 的协作以**制品（文件与实验产物）
 > 为单位，而非会话**——会话永远是单人的，协作通过 Git + 制品写锁 + 审阅批注完成。
 
 ## 1. 协作边界（明确声明）

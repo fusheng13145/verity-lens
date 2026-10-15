@@ -1,7 +1,7 @@
 [project]
 name = "verity-lens"
 version = "0.1.0"
-description = "VerityLens (真理之眼) — 科研全能 Agent 系统"
+description = "verity-lens (真理之眼) — 科研全能 Agent 系统"
 requires-python = ">=3.11"
 dependencies = [
     "pydantic>=2",

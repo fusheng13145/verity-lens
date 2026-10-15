@@ -1,4 +1,4 @@
-"""VerityLens 编排层 CLI 入口（Orchestrator Lite）。
+"""verity-lens 编排层 CLI 入口（Orchestrator Lite）。
 
 仅依赖标准库，保证在未安装第三方依赖时也能打印帮助。
 已实现（Phase 0）：init / gate
@@ -377,7 +377,7 @@ def cmd_sandbox(args) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(prog="vl", description="VerityLens 编排层 CLI")
+    p = argparse.ArgumentParser(prog="vl", description="verity-lens 编排层 CLI")
     sub = p.add_subparsers(dest="command")
 
     sp = sub.add_parser("init", help="生成 Workspace 脚手架")

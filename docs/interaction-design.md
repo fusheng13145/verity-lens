@@ -1,6 +1,6 @@
 # 交互设计规范（Interaction Design）
 
-**目的**：统一交互层（CLI / Web UI / Headless API）的输出格式、门禁交互与错误呈现规范。保证人机协作（HITL）体验一致、信息可信可追溯。视觉层依赖底座自带 Web UI，本文件约束的是 VerityLens 自有交互面（以 CLI 为主）。
+**目的**：统一交互层（CLI / Web UI / Headless API）的输出格式、门禁交互与错误呈现规范。保证人机协作（HITL）体验一致、信息可信可追溯。视觉层依赖底座自带 Web UI，本文件约束的是 verity-lens 自有交互面（以 CLI 为主）。
 
 ## 1. CLI 输出规范
 

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://verity-lens/schemas/hypothesis_tree.schema.json",
-  "title": "VerityLens 假设树",
+  "title": "verity-lens 假设树",
   "description": "假设/实验节点树。parent_id 不得成环（由代码校验，见 gates.py validate_acyclic）。",
   "type": "object",
   "required": ["root_question", "nodes"],

@@ -1,4 +1,4 @@
-# VerityLens 科研代码执行沙箱（依据 design-blueprint.md §2.8.2）
+# verity-lens 科研代码执行沙箱（依据 design-blueprint.md §2.8.2）
 #
 # 用途：在强隔离容器中运行 Agent 生成的科研代码（分析/绘图/统计），
 #       底座本身不进入本容器；容器内仅能读写脱敏后的 data/processed 与产物目录。

@@ -22,7 +22,7 @@ from orchestrator.gates import PHASES, check_gate, compute_facts, load_project
 
 WORKSPACES_ROOT = Path("workspaces")
 
-app = FastAPI(title="VerityLens Headless API", version="0.1.0")
+app = FastAPI(title="verity-lens Headless API", version="0.1.0")
 
 
 # ── 数据模型 ──────────────────────────────────────────────────────────

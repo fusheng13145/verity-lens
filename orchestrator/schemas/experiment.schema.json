@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://verity-lens/schemas/experiment.schema.json",
-  "title": "VerityLens 实验配置",
+  "title": "verity-lens 实验配置",
   "description": "单个实验的配置、执行与结果状态。failed 为临时态，必须经 failure_loop 转为终态。",
   "type": "object",
   "required": [
