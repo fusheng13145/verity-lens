@@ -65,6 +65,12 @@ token_budget:
     "classification": { "category": "METH", "code": "METH-POWER-LOW", "confidence": 0.8,
                         "rationale": "p=0.12, d=0.35, power=0.41<0.8" },
     "evidence": [ { "path": "data/processed/exp_001/stats_report.json", "locator": "$.power" } ],
+    "reported_metrics": {
+      "group_stats": { "mean_a": 12.4, "sd_a": 3.1, "n_a": 100,
+                       "mean_b": 11.3, "sd_b": 2.9, "n_b": 100 },
+      "test": "welch", "p_value": 0.12, "effect_size": 0.35,
+      "n_per_group": 100, "power": 0.41
+    },
     "decision": { "type": "revise_experiment", "action": "exp_002",
                   "changes": ["num_samples: 100 -> 250"], "approved_by": "researcher_pi" },
     "lesson": "小样本效应量可能被高估；设计前先做功效分析",
@@ -72,6 +78,17 @@ token_budget:
   }]
 }
 ```
+
+**`reported_metrics`（Phase 4e 新增，可选）**：条目主张的关键数值，是 `failure_loop.verify_with_sidecar`
+做确定性复算的唯一输入——没有它，复算只能返回 `skipped`（不算"已验证"）。
+
+| 字段 | 复算方式 |
+|------|----------|
+| `group_stats`（mean/sd/n ×2） | **完整复算**：stat_test 重算 p、效应量、95% CI |
+| `effect_size` + `ci_95` | **相容性交叉复算**：由 CI 反推 se → z → 复算 p 与主张值比对（容差 max(0.002, 10%·p)） |
+| `effect_size` + `n_per_group`（± `power`） | power_analysis 复算事后功效（容差 0.02），并强制附带 `post_hoc_warning` 科研诚信提示 |
+
+对不上时 `verify_with_sidecar` 返回 `status=mismatch`，METH/HYP 归因必须先解释差异，不得直接进入决策落盘。
 
 ## 5. experiment.yaml（关键字段）
 

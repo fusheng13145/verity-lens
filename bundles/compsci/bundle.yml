@@ -22,7 +22,7 @@ preset_patch:
     5. 主指标必须带 std 或 CI，禁止只报点估计；
     6. 基线对比须报告 baseline_delta 与显著性，禁止仅声称 SOTA。
     关键数值必须经 sidecar 确定性工具复算，不得自行产出。
-  tool_whitelist: ["stat_test", "doi_verify"]
+  tool_whitelist: ["stat_test", "doi_verify", "power_analysis"]
 
 # L2：MCP 服务声明（sidecar 确定性工具，stdio 协议；入口见 sidecar/tools/_stdio.py）
 mcp:
@@ -37,6 +37,11 @@ mcp:
       command: ["python", "-m", "sidecar.tools.doi_verify"]
       tools: ["doi_verify"]
       description: "DOI 归一化 + Crossref 存在性校验，网络降级"
+    - name: "verity-power-analysis"
+      transport: "stdio"
+      command: ["python", "-m", "sidecar.tools.power_analysis"]
+      tools: ["power_analysis"]
+      description: "功效分析（先验样本量 / 事后功效），METH 归因硬证据"
 
 # L2：Golden 用例（L1 验证脚本的输入/期望输出对，tests/golden/test_bundle_golden.py 回归）
 golden_cases:

@@ -1,8 +1,8 @@
 {
-  "comparison": "drug vs placebo（随机双盲，n=120/组）",
+  "comparison": "drug vs placebo（随机双盲，n=31/组）",
   "metric": "mean_difference",
   "effect_size": 0.62,
   "ci_95": [0.31, 0.93],
-  "p_value": 0.023,
+  "p_value": 0.0001,
   "test_used": "welch"
 }

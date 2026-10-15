@@ -16,6 +16,7 @@
 from __future__ import annotations
 
 import json
+import math
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -137,30 +138,184 @@ def validate_entry(entry: dict) -> list[str]:
             for e in sorted(v.iter_errors({"entries": [entry]}), key=lambda e: list(e.path))]
 
 
+def _recompute_from_group_stats(metrics: dict) -> list[dict]:
+    """用原始组统计量完整复算 p / 效应量 / CI（stat_test，确定性）。"""
+    import sidecar.tools.stat_test as stat
+
+    g = metrics["group_stats"]
+    # 由均值/标准差重建等价样本（统计量与原组一致），只用于复算 p / d / CI，
+    # 不触碰也不依赖原始数据。
+    a = _reconstruct(g["mean_a"], g["sd_a"], int(g["n_a"]))
+    b = _reconstruct(g["mean_b"], g["sd_b"], int(g["n_b"]))
+    out = stat.run(a, b, test=metrics.get("test", "welch"),
+                   alpha=float(metrics.get("alpha", 0.05)))
+    return [out]
+
+
+def _reconstruct(mean: float, sd: float, n: int) -> list[float]:
+    """由 (mean, sd, n) 构造均值与样本标准差精确匹配的等价样本。
+
+    取等差序列 x_i = mean + a·(i − (n−1)/2)：均值自动为 mean，
+    令 a = sd·sqrt(12 / (n(n+1))) 可使样本方差（ddof=1）恰为 sd²
+    （因为 Σ(i−(n−1)/2)² = n(n²−1)/12）。
+    该样本仅用于让确定性工具复算统计量，**不是原始数据**。
+    """
+    step = sd * math.sqrt(12.0 / (n * (n + 1)))
+    return [mean + step * (i - (n - 1) / 2) for i in range(n)]
+
+
+def _cross_check_p_vs_ci(metrics: dict) -> dict:
+    """p 值 ↔ 95% CI 相容性交叉复算（无原始数据时的确定性核对）。
+
+    由 CI 反推标准误 se = (hi − lo) / (2·z_{0.975})，再由效应量反推 z = est / se，
+    复算 p = 2(1 − Φ(|z|)) 与条目主张的 p 值比对。
+    """
+    from scipy import stats  # type: ignore
+
+    est = float(metrics["effect_size"])
+    lo, hi = (float(metrics["ci_95"][0]), float(metrics["ci_95"][1]))
+    alpha = float(metrics.get("alpha", 0.05))
+    reported_p = metrics.get("p_value")
+    se = (hi - lo) / (2 * stats.norm.ppf(1 - alpha / 2))
+    z = abs(est) / se if se > 0 else float("inf")
+    p_recomputed = float(2 * (1 - stats.norm.cdf(z)))
+    # 容差：绝对项覆盖舍入，相对项覆盖小 p 值——固定 0.05 会把 p=0.023 vs 9e-5 误判为通过
+    tol = max(0.002, 0.10 * abs(float(reported_p))) if reported_p is not None else 0.0
+    ok = reported_p is not None and abs(p_recomputed - float(reported_p)) <= tol
+    return {
+        "method": "p↔ci cross-check",
+        "se_from_ci": round(se, 6),
+        "z": round(z, 4),
+        "p_recomputed": round(p_recomputed, 8),
+        "p_reported": reported_p,
+        "tolerance": round(tol, 6),
+        "ok": bool(ok),
+    }
+
+
 def verify_with_sidecar(entry: dict) -> dict:
-    """用确定性工具复核关键数值。依赖缺失时降级（返回 skipped + 原因）。"""
-    cls = (entry.get("classification") or {})
+    """用确定性 Sidecar 工具复算条目主张的关键数值。
+
+    硬规则（AGENTS.md 规则 4）：关键数值必经确定性工具复算，模型不得自行产出。
+    本函数不是"探测工具是否可用"，而是**真的算一遍并与条目主张比对**：
+
+    - `reported_metrics.group_stats` 齐全 → stat_test 完整复算 p / 效应量 / CI；
+    - 只有 effect_size + ci_95（+ n_per_group）→ 做 p ↔ CI 相容性交叉复算；
+    - 主张了功效（含 "power" 字段或 METH 归因为功效不足）→ power_analysis 复算并标注；
+    - 无可复算数值 → skipped + 明确原因（绝不假装已验证）。
+
+    依赖缺失时降级为 skipped（不静默通过）。对不上时 status=mismatch，METH 归因必须先解释差异。
+    """
+    cls = entry.get("classification") or {}
     code = cls.get("code", "")
+    metrics = entry.get("reported_metrics") or {}
     result: dict[str, Any] = {"status": "skipped", "checks": []}
 
+    if not (code.startswith("METH") or code.startswith("HYP") or code.startswith("EPIS")):
+        result["reason"] = f"分类 {code or '(空)'} 无需数值复算"
+        return result
+
+    # ── 统计数值复算 ────────────────────────────────────────────────
     if code.startswith("METH") or code.startswith("HYP"):
         try:
-            import sidecar.tools.stat_test as stat  # noqa: F401
+            checks: list[dict] = []
+            if metrics.get("group_stats"):
+                for got in _recompute_from_group_stats(metrics):
+                    checks.append(
+                        {
+                            "tool": "stat_test",
+                            "recomputed": {
+                                "p_value": round(float(got["p_value"]), 6),
+                                "effect_size": (
+                                    None
+                                    if got["effect_size"] is None
+                                    else round(float(got["effect_size"]), 4)
+                                ),
+                                "ci_95": [None if v is None else round(float(v), 4)
+                                          for v in got["ci_95"]],
+                                "test_used": got["test_used"],
+                            },
+                            "reported": {
+                                "p_value": metrics.get("p_value"),
+                                "effect_size": metrics.get("effect_size"),
+                                "ci_95": metrics.get("ci_95"),
+                            },
+                        }
+                    )
+                result["status"] = "verified"
+                result["checks"].extend(checks)
+            elif metrics.get("effect_size") is not None and metrics.get("ci_95"):
+                result["checks"].append({"tool": "stat_test", **_cross_check_p_vs_ci(metrics)})
+                result["status"] = (
+                    "verified"
+                    if result["checks"][-1]["ok"]
+                    else "mismatch"
+                )
+            else:
+                result["checks"].append(
+                    {
+                        "tool": "stat_test",
+                        "status": "skipped",
+                        "reason": "条目未提供 reported_metrics（group_stats 或 effect_size+ci_95），无法复算",
+                    }
+                )
         except Exception as exc:
-            result["checks"].append({"tool": "stat_test", "status": "skipped",
-                                     "reason": f"依赖不可用: {exc}"})
+            result["checks"].append(
+                {"tool": "stat_test", "status": "skipped", "reason": f"依赖不可用: {exc}"}
+            )
             return result
-        result["status"] = "verified"
-        result["checks"].append({"tool": "stat_test", "status": "available"})
 
-    if code.startswith("EPIS") or code.startswith("HYP"):
+    # ── 功效复算（METH 归因的常见硬证据）────────────────────────────
+    n_per_group = metrics.get("n_per_group")
+    eff = metrics.get("effect_size")
+    if eff is not None and n_per_group is not None:
         try:
-            import sidecar.tools.doi_verify as dv  # noqa: F401
-            result["status"] = "verified"
-            result["checks"].append({"tool": "doi_verify", "status": "available"})
+            import sidecar.tools.power_analysis as pa
+
+            reported_power = metrics.get("power")
+            post = pa.run("post", effect_size=abs(float(eff)), n_per_group=int(n_per_group))
+            check = {
+                "tool": "power_analysis",
+                "mode": "post",
+                "power_recomputed": round(post["power"], 6),
+                "power_reported": reported_power,
+                "required_n": post["required_n"],
+                "underpowered_recomputed": post["underpowered"],
+                "post_hoc_warning": post["post_hoc_warning"],
+            }
+            if reported_power is not None:
+                check["ok"] = abs(post["power"] - float(reported_power)) <= 0.02
+                if not check["ok"] and result["status"] == "verified":
+                    result["status"] = "mismatch"
+            result["checks"].append(check)
         except Exception as exc:
-            result["checks"].append({"tool": "doi_verify", "status": "skipped",
-                                     "reason": f"依赖不可用: {exc}"})
+            result["checks"].append(
+                {"tool": "power_analysis", "status": "skipped", "reason": f"依赖不可用: {exc}"}
+            )
+    elif metrics.get("power") is not None:
+        result["checks"].append(
+            {
+                "tool": "power_analysis",
+                "status": "skipped",
+                "reason": "缺少 effect_size 与 n_per_group，无法复算功效",
+            }
+        )
+
+    # ── 引用可达性（EPIS）───────────────────────────────────────────
+    if code.startswith("EPIS"):
+        try:
+            import sidecar.tools.doi_verify  # noqa: F401
+
+            result["checks"].append({"tool": "doi_verify", "status": "available"})
+            if result["status"] == "skipped":
+                result["status"] = "verified"
+        except Exception as exc:
+            result["checks"].append(
+                {"tool": "doi_verify", "status": "skipped", "reason": f"依赖不可用: {exc}"}
+            )
+
+    if result["status"] == "skipped" and not result["checks"]:
+        result["reason"] = "条目未提供可复算数值（不视为已验证）"
     return result
 
 

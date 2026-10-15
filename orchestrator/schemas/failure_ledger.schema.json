@@ -53,6 +53,40 @@
             "required": ["path"]
           }
         },
+        "reported_metrics": {
+          "type": "object",
+          "description": "条目主张的关键数值；failure_loop.verify_with_sidecar 据此做确定性复算（硬规则：关键数值必经 Sidecar 复算）。给出 group_stats 则完整复算 p/效应量/CI；只给 effect_size+ci_95+n_per_group 则做 p↔CI 相容性交叉复算。",
+          "properties": {
+            "group_stats": {
+              "type": "object",
+              "description": "原始组统计量（确定性复算的输入）",
+              "properties": {
+                "mean_a": { "type": "number" },
+                "sd_a": { "type": "number", "exclusiveMinimum": 0 },
+                "n_a": { "type": "integer", "minimum": 2 },
+                "mean_b": { "type": "number" },
+                "sd_b": { "type": "number", "exclusiveMinimum": 0 },
+                "n_b": { "type": "integer", "minimum": 2 }
+              },
+              "required": ["mean_a", "sd_a", "n_a", "mean_b", "sd_b", "n_b"]
+            },
+            "test": {
+              "type": "string",
+              "enum": ["t-test", "welch", "mann-whitney"]
+            },
+            "alpha": { "type": "number", "exclusiveMinimum": 0, "maximum": 1 },
+            "p_value": { "type": "number", "minimum": 0, "maximum": 1 },
+            "effect_size": { "type": "number" },
+            "ci_95": {
+              "type": "array",
+              "items": { "type": "number" },
+              "minItems": 2,
+              "maxItems": 2
+            },
+            "n_per_group": { "type": "integer", "minimum": 2 },
+            "power": { "type": "number", "minimum": 0, "maximum": 1 }
+          }
+        },
         "decision": {
           "type": "object",
           "required": ["type"],

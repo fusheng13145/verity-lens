@@ -9,6 +9,7 @@
   - Phase 4b ✅ 2026-10-15：compsci 第三学科（L0→L1）+ biomed 正式升 L1 + README 命名统一为 verity-lens
   - Phase 4c ✅ 2026-10-15：三学科升 L2（preset_patch + MCP 声明 + Golden 用例）+ `vl bundle load` 加载器 + numpy/scipy 补装
   - Phase 4d ✅ 2026-10-15：**HAL 契约对齐真实 DSH**（deepseek-ai/deepseek-harness 官方 CLI/mcp-client 键；本机实测 0.1.5-rc.2；版本特性门控 + 显式降级）
+  - Phase 4e ✅ 2026-10-15：**科研正确性闭环**——power_analysis 工具落地 + verify_with_sidecar 真复算（p↔CI 自洽性 / 功效）+ L3 测试层从空目录变为 16 例
 - **下一步**：底座 ≥0.2 升级后补事件流/session 接管联调 + patch schema 机读校验（`--dump-config-schema`）；协作模型按真实痛点重评估（不预设方案）
 
 ## Phase 4：扩展评估（按需）
@@ -36,6 +37,13 @@
   - [x] Windows 兼容：`shutil.which` 解析 npm `.cmd` shim + 非 UTF-8 输出容错解码
   - [x] HAL 契约测试重写为真实命令行形状 + 版本降级（39 例），并含真实 dsh 实测用例
   - [ ] 底座升级至 ≥0.2 后：NDJSON 事件流 / session 接管联调 + patch schema 机读校验（`--dump-config-schema`）
+- [x] **Phase 4e** — 科研正确性闭环（2026-10-15）
+  - [x] `sidecar/tools/power_analysis.py`：先验样本量 / 事后功效（正态近似双侧），带 TOOL_SPEC + stdio 入口
+  - [x] `verify_with_sidecar` 由「仅探测工具可用」升级为真实复算：组统计量完整复算 + p↔CI 交叉复算 + 功效复算；不一致报 mismatch
+  - [x] `failure_ledger.schema.json` 新增可选 `reported_metrics`（复算的唯一输入）
+  - [x] L3 层落地：`tests/correctness/` 由空目录变为 16 例真实抽检（含与 scipy 独立 API 对齐）
+  - [x] 修正 biomed 金样例的统计不自洽（p=0.023 与 CI[0.31,0.93] 蕴含 p≈9e-5，被 L3 交叉复算查出）
+  - [x] biomed / compsci 注册 `verity-power-analysis` MCP 服务
 - [ ] 协作模型按真实痛点重评估（蓝图明确"不预设方案"，待 1–10 人团队实际协作反馈）
 
 ## Phase 3：健壮性与协作 ✅ 2026-10-15

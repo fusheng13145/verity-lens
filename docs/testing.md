@@ -14,9 +14,12 @@
 ## 2. 检查项明细
 
 - **L1**：RESEARCH.yaml 强制字段齐全；hypothesis_tree 节点合法无环；experiment success_criteria 格式；failure_ledger evidence 指针有效；refuted 节点必附 `justified_by`；abandoned 必附 failure_ref。
-- **L2**：阶段顺序正确；HITL 门禁正确触发/等待；检索类子代理无写操作；Session Log 无未验证断言；失败闭环用例走通"归因→决策→假设修订"。
-- **L3**：p 值 sidecar 复算容差 ±1e-6；引用 HTTP 200 + 元数据匹配；图表与原始文件数值一致；实验参数（种子/版本）在 Session Log 可追溯。
+- **L2**：阶段顺序正确；HITL 门禁正确触发/等待；检索类子代理无写操作；Session Log 无未验证断言；失败闭环用例走通"归因→决策→假设修订"；Bundle Golden（验证脚本输出逐字比对，防"悄悄放水"）。
+- **L3**（`tests/correctness/`，Phase 4e 起非空）：p 值与 95% CI 的**统计自洽性**（由 CI 反推 z 复算 p）、组统计量的完整复算（与 scipy `ttest_ind_from_stats` 对齐）、功效样本量与经典值对照（d=0.5→63、d=0.2→393）、引用 HTTP 200 + 元数据匹配、图表与原始文件数值一致。
 - **L4**：HAL 接口签名/行为一致；`capabilities()` 与实测一致；降级路径在特性 false 时不抛异常。
+
+> 复算口径提醒：`verify_with_sidecar` 返回 `skipped` 表示"无可复算数值"，**不等于已验证**；
+> 返回 `mismatch` 表示条目数值对不上，METH/HYP 归因必须先解释差异。
 
 ## 3. 科研 Agent 验收维度总结
 

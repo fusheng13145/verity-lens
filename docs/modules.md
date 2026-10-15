@@ -13,7 +13,7 @@
 
 ## 2. Orchestrator Lite（编排内核）`orchestrator/`
 - **职责**：无状态事件处理器，提供阶段门禁、失败回流、预算硬阻断。
-- **公开接口**：CLI `vl init/gate/loop/budget/lock/bundle/finalize`；纯函数 `gates.py`；`failure_loop.py`；`budget.py`。
+- **公开接口**：CLI `vl init/gate/loop/budget/lock/bundle/finalize`；纯函数 `gates.py`；`failure_loop.py`（预算检查在 `cli.py:cmd_budget`，未独立成模块）。
 - **依赖**：`hal`（注册接口）、Workspace 文件（真相源）、Sidecar 工具（归因复核）。
 - **耦合边界**：不持有状态、不建数据库；规则来自 `gates.rules.yaml`（声明式，专家可改）。
 - **可测试性**：门禁为纯函数，可直接单测；Golden 轨迹回归覆盖端到端。

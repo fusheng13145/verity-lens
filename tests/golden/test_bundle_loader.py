@@ -42,7 +42,9 @@ def test_load_with_full_capabilities(adapter, monkeypatch):
     report = load_bundle(BUNDLES_DIR / "compsci", adapter=adapter)
     assert report.ok
     assert report.degradations == []
-    assert report.mcp_servers == ["verity-stat-test", "verity-doi-verify"]
+    assert report.mcp_servers == [
+        "verity-stat-test", "verity-doi-verify", "verity-power-analysis"
+    ]
     assert report.preset == "verity-research"
 
 
@@ -88,4 +90,4 @@ def test_load_manifest_parses_fields():
     assert data["preset_patch"]["preset"] == "verity-research"
     assert {s["name"] for s in data["mcp"]["servers"]} == {
         "verity-stat-test", "verity-doi-verify"
-    }
+    }  # materials 不做假设检验/功效分析，不需要 power_analysis  # materials 不做假设检验/功效分析，不需要 power_analysis

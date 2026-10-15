@@ -2,6 +2,35 @@
 
 > 遵循 Keep a Changelog 风格，版本号 `MAJOR.MINOR.PATCH`。
 
+## [1.11.0] - 2026-10-15 — Phase 4e（科研正确性闭环：功效工具 + 真实复算 + L3 落地）
+
+### Added
+- **`sidecar/tools/power_analysis.py`**（Phase 0 起文档已承诺但一直缺失的关键工具）：
+  - `mode=prior` 达到目标功效所需样本量；`mode=post` 观测样本量下的实际功效 + `underpowered` 判定；
+  - 两样本 / 单样本，正态近似双侧口径；样本量与经典值对齐（d=0.5→63、d=0.2→393、d=0.8→25；精确非中心 t 检验为 64/394/26）；
+  - 强制附带 `post_hoc_warning`（事后功效不能替代 p 值、不构成事后检验正当性）——科研诚信提示随输出走，不可被静默丢弃；
+  - 带 `TOOL_SPEC` + stdio 入口（`python -m sidecar.tools.power_analysis`），非法输入显式报错（退出码 1）。
+- **L3 科研正确性层落地**：`tests/correctness/` 此前是**空目录**（`make correctness` 假绿），现为 16 例真实抽检：
+  p↔CI 统计自洽性、组统计量完整复算（与 scipy `ttest_ind_from_stats` 对齐到 1e-9）、功效样本量对照、stat_test 确定性、三学科金样例数值合理性。
+- **MCP 注册**：biomed / compsci 增加 `verity-power-analysis` 服务并纳入 `tool_whitelist`（materials 不做假设检验，无需）。
+- `failure_ledger.schema.json` 新增可选 `reported_metrics`（group_stats / p_value / effect_size / ci_95 / n_per_group / power）——确定性复算的唯一输入。
+
+### Changed
+- **`verify_with_sidecar` 由"探测工具是否可用"升级为真实数值复算**（此前只要能 import 就标 `verified`，等于放行一切未复算的数字）：
+  - `group_stats` 齐全 → stat_test 完整复算 p / 效应量 / CI；
+  - 仅 `effect_size`+`ci_95` → 相容性交叉复算（由 CI 反推 se → z → 复算 p，容差 `max(0.002, 10%·p)`）；
+  - `effect_size`+`n_per_group` → power_analysis 复算事后功效（容差 0.02）；
+  - 对不上 → `status=mismatch`（METH/HYP 归因必须先解释差异）；无可复算数值 → `skipped` 且**不算已验证**。
+- `_reconstruct` 修正：等差序列步长改为 `sd·sqrt(12/(n(n+1)))`，使重建样本的样本方差精确等于 sd²（此前方差被缩小 n/12 倍，复算结果全错）。
+
+### Fixed
+- **biomed 金样例统计不自洽**（被新 L3 层查出）：`stats_ok` 原声明 `p=0.023` 与 `CI=[0.31,0.93]`（蕴含 z≈3.92 → p≈9e-5）互相矛盾；已改为 `p=0.0001`、样本量注记 n=31/组，与 CI 自洽。域校验输出不变（仍为合规样例）。
+- `docs/modules.md` 文档漂移：声称存在 `budget.py`，实际预算检查在 `cli.py:cmd_budget`。
+
+### Tests
+- 新增 L3 层 16 例 + stdio 用例 2 例；更新三学科并存/加载器用例以支持逐学科 MCP 集合。
+- 全量 **167 个用例**通过（原 149 + 新增 18）。
+
 ## [1.10.0] - 2026-10-15 — Phase 4d（HAL 契约对齐真实 DSH）
 
 ### Fixed

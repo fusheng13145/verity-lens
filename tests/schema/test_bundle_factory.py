@@ -111,13 +111,15 @@ def test_materials_bundle_validates():
 
 def test_three_disciplines_coexist():
     """Phase 4b→4c：biomed / materials / compsci 三学科并存、均达 L2、结构合规。"""
+    # Phase 4e：biomed / compsci 需要功效分析（METH 归因硬证据），materials 不需要
+    stats_servers = {"verity-stat-test", "verity-doi-verify"}
     disciplines = {
-        "biomed": ("L2", {"biomed-stats", "biomed-literature"}),
-        "materials": ("L2", {"materials-characterization", "materials-literature"}),
-        "compsci": ("L2", {"compsci-computation", "compsci-literature"}),
+        "biomed": ("L2", {"biomed-stats", "biomed-literature"}, stats_servers | {"verity-power-analysis"}),
+        "materials": ("L2", {"materials-characterization", "materials-literature"}, stats_servers),
+        "compsci": ("L2", {"compsci-computation", "compsci-literature"}, stats_servers | {"verity-power-analysis"}),
     }
     seen_disciplines: set[str] = set()
-    for name, (level, skills) in disciplines.items():
+    for name, (level, skills, servers) in disciplines.items():
         d = REPO_ROOT / "bundles" / name
         problems = validate_bundle(d)
         assert problems == [], f"{name}: {problems}"
@@ -126,9 +128,7 @@ def test_three_disciplines_coexist():
         assert data["level"] == level
         # L2 三要素齐备
         assert data["preset_patch"]["preset"] == "verity-research"
-        assert {s["name"] for s in data["mcp"]["servers"]} == {
-            "verity-stat-test", "verity-doi-verify"
-        }
+        assert {s["name"] for s in data["mcp"]["servers"]} == servers, name
         assert len(data["golden_cases"]) >= 1
         skill_dirs = {p.parent.name for p in d.glob("skills/*/SKILL.md")}
         assert skill_dirs == skills, f"{name}: {skill_dirs}"

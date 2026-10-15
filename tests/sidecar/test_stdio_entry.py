@@ -37,3 +37,24 @@ def test_doi_verify_stdio_offline_format_error():
     out = _run_tool("sidecar.tools.doi_verify", {"doi": "not-a-doi"})
     assert out["exists"] is False
     assert out["error"] == "DOI 格式非法"
+
+
+def test_power_analysis_stdio():
+    out = _run_tool("sidecar.tools.power_analysis", {"mode": "prior", "effect_size": 0.5})
+    assert out["required_n"] == 63
+    assert out["power"] >= 0.8
+    assert out["method"] == "normal approximation (two-sided)"
+
+
+def test_power_analysis_stdio_reports_incoherent_input():
+    """非法输入必须显式报错（退出码 1 + error），不得静默返回数值。"""
+    proc = subprocess.run(
+        [sys.executable, "-m", "sidecar.tools.power_analysis"],
+        input=json.dumps({"mode": "prior", "effect_size": 0}),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        cwd=str(REPO_ROOT),
+    )
+    assert proc.returncode == 1
+    assert "error" in json.loads(proc.stdout)

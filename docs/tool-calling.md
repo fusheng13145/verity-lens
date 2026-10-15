@@ -28,9 +28,9 @@
 | 工具 | 输入 | 输出 | 说明 |
 |------|------|------|------|
 | stat_test | 数据 + 检验类型 | p/effect_size/ci_95/test | 数值复算，禁止模型自算 |
-| power_analysis | 效应量/样本量/α | power/required_n | 失败归因复核 |
+| power_analysis | mode(prior/post)/design/effect_size/α/n | required_n/power/underpowered | 失败归因复核（METH 功效不足须给复算证据） |
 | doi_verify | DOI | exists/metadata_match | 引用有效性 ≥95% |
-| hpc_submit | 命令+资源 | job_id/status_endpoint | 长任务远程提交+轮询 |
+| hpc_submit | 命令+资源 | job_id/status_endpoint | 长任务远程提交+轮询（未实现） |
 | desensitize | 原始数据 | 脱敏数据 | k-匿名/PHI/DP(ε=1.0) |
 
 ## 5. 安全约束

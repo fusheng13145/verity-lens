@@ -100,11 +100,12 @@ class HarnessAdapter(Protocol):
 - `name`、`description`、`input_schema`（JSON Schema）、`output_schema`。
 - 确定性：相同输入相同输出；耗时长任务走 HPC 提交并返回 job_id 轮询。
 
-关键工具：
-- `stat_test`：t/ANOVA/非参数/多重校正 → 输出 `{p_value, effect_size, ci_95, test_used}`。
-- `power_analysis`：先验/事后功效 → 输出 `{power, required_n}`，承担失败归因复核。
-- `doi_verify`：输入 DOI → 输出 `{exists, metadata_match}`。
-- `hpc_submit`：输入命令+资源 → 输出 `{job_id, status_endpoint}`。
+关键工具（已实现者标注 stdio 入口 `python -m sidecar.tools.<name>`）：
+- `stat_test`：两组比较（t-test / Welch / Mann-Whitney）→ 输出 `{p_value, effect_size, ci_95, test_used}`。✅
+- `power_analysis`（✅ Phase 4e）：先验样本量 / 事后功效 → 输出 `{required_n, power, underpowered, post_hoc_warning}`；
+  正态近似双侧口径（d=0.5 → 63/组；精确非中心 t 检验为 64，临界样本量建议用 G*Power 复核）。
+- `doi_verify`：输入 DOI → 输出 `{exists, metadata_match, error}`。✅
+- `hpc_submit`（未实现）：输入命令+资源 → 输出 `{job_id, status_endpoint}`。
 
 ## 4. MCP Server 契约
 
