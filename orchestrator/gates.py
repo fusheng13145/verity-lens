@@ -56,6 +56,13 @@ def load_project(workspace: Path) -> dict:
     return data or {}
 
 
+def save_project(workspace: Path, data: dict) -> None:
+    """写回 RESEARCH.yaml（保留中文与 YAML 字段顺序）。"""
+    path = workspace / "RESEARCH.yaml"
+    text = yaml.safe_dump(data, allow_unicode=True, sort_keys=False)
+    path.write_text(text, encoding="utf-8")
+
+
 def load_rules(path: Path | None = None) -> dict:
     """读取声明式门禁规则表。"""
     p = path or GATES_RULES_PATH

@@ -34,6 +34,8 @@
 | 13 | `bundle-registry.md` | Bundle 注册表 | 领域包生态台账 | 台账 / 注册流程 / 校验要求 / 分发版本 | 新 Bundle 必须登记，防漂移 |
 | 14 | `interaction-design.md` | 交互设计规范 | 统一 CLI/HITL 交互 | CLI 输出 / HITL 要素 / 错误降级呈现 / 可追溯性 | 阻塞必附缺失清单，数值必标来源 |
 | 15 | `frontend.md` | 前端设计规范 | React 前端技术栈/目录/API 契约 | 技术栈 / 目录 / Headless API 契约 / 关键交互 / 构建联调 | 仅经 Headless API 交互，类型由 schemas 生成 |
+| 16 | `collab.md` | 协作与制品管理 | 写锁 + Git 假设分支 + 分支保护 | 协作边界 / 制品写锁 / 假设分支流 / 分支保护 / pre_session 片段 | 以制品为协作单位，先到先得 + 超时失效 |
+| 17 | `docker/sandbox.md` | 容器沙箱与敏感数据治理 | 代码执行隔离 + 数据脱敏管道 | 安全基线 / 生成方式 / 五步治理管道 / 与编排层关系 | never_in_context：敏感数据永不进上下文 |
 
 ### 根目录文件（面向日常协作与变更管理）
 

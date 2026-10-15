@@ -197,8 +197,64 @@ def cmd_budget(args) -> int:
 
 
 def cmd_lock(args) -> int:
-    """制品写锁（Phase 3 实现）。"""
-    print(f"[lock] {args.action} {args.artifact}：Phase 3 待实现")
+    """制品写锁：acquire / release / check。
+
+    写锁写在 RESEARCH.yaml 的 locks 字段；acquire 冲突（他人未过期锁）时退出码 2。
+    """
+    from orchestrator.gates import load_project, save_project
+    from orchestrator.lock import (
+        acquire_lock,
+        check_locks,
+        conflict_for_holder,
+        release_lock,
+    )
+
+    workspace = Path(args.path)
+    try:
+        research = load_project(workspace)
+    except FileNotFoundError as exc:
+        print(f"[ERROR] {exc}")
+        return EXIT_ERROR
+
+    if args.action == "check":
+        state = check_locks(research)
+        if args.json:
+            print(json.dumps(state, ensure_ascii=False))
+            return EXIT_OK
+        if state["active"]:
+            print(f"[lock] 有效写锁（{len(state['active'])}）：")
+            for name, e in state["active"].items():
+                print(f"  - {name}: holder={e.get('holder')} expires={e.get('expires_at')}")
+        else:
+            print("[lock] 无有效写锁")
+        if state["expired"]:
+            print(f"[lock] 已过期待清理（{len(state['expired'])}）：{list(state['expired'])}")
+        return EXIT_OK
+
+    holder = args.holder
+    if not holder:
+        print("[ERROR] acquire/release 需要 --holder")
+        return EXIT_ERROR
+
+    if args.action == "acquire":
+        conflict = conflict_for_holder(research, args.artifact, holder)
+        if conflict:
+            print(f"[BLOCKED] {conflict}")
+            return EXIT_BLOCKED
+        new_research, err = acquire_lock(
+            research, args.artifact, holder, ttl_seconds=args.ttl
+        )
+        if err:
+            print(f"[BLOCKED] {err}")
+            return EXIT_BLOCKED
+        save_project(workspace, new_research)
+        print(f"[lock] {args.artifact} 已锁定 by {holder}（TTL={args.ttl}s）")
+        return EXIT_OK
+
+    # action == release
+    new_research = release_lock(research, args.artifact, holder=holder)
+    save_project(workspace, new_research)
+    print(f"[lock] {args.artifact} 已释放（by {holder}）")
     return EXIT_OK
 
 
@@ -243,6 +299,69 @@ def cmd_finalize(args) -> int:
     return EXIT_OK
 
 
+def cmd_branch(args) -> int:
+    """Git 假设分支协作：create / merge / status。"""
+    from orchestrator.collab import (
+        check_merge_readiness,
+        create_hypothesis_branch,
+        current_branch,
+        merge_to_main,
+    )
+
+    workspace = Path(args.path)
+    if args.action == "create":
+        ok, info = create_hypothesis_branch(args.hypothesis_id, workspace)
+        if not ok:
+            print(f"[ERROR] {info}")
+            return EXIT_ERROR
+        print(f"[branch] 已切出假设分支: {info}")
+        return EXIT_OK
+
+    if args.action == "status":
+        state = check_merge_readiness(workspace)
+        print(f"[branch] 当前分支: {state['branch']} | 就绪: {state['ready']}")
+        for r in state["reasons"]:
+            print(f"  - {r}")
+        return EXIT_OK if state["ready"] else EXIT_BLOCKED
+
+    # action == merge
+    ok, info = merge_to_main(workspace)
+    if not ok:
+        print(f"[BLOCKED] 合并未完成: {info}")
+        return EXIT_BLOCKED
+    print(f"[branch] 已合并 {info} → main（--no-ff）")
+    return EXIT_OK
+
+
+def cmd_sandbox(args) -> int:
+    """生成项目专属沙箱 compose（依据 design-blueprint.md §2.8.2）。"""
+    from orchestrator.sandbox import (
+        generate,
+        missing_host_dirs,
+        render_compose,
+        validate_compose,
+    )
+
+    project_id = args.project_id
+    if args.check:
+        text = render_compose(project_id, workspace_root=args.workspace_root)
+        problems = validate_compose(text)
+        if problems:
+            print(f"[BLOCKED] 沙箱基线缺失（{len(problems)}）：")
+            for i, m in enumerate(problems, 1):
+                print(f"  {i}. {m}")
+            return EXIT_BLOCKED
+        print("[PASS] 沙箱 compose 满足最小安全基线")
+        return EXIT_OK
+
+    dest = generate(project_id, workspace_root=args.workspace_root, out_dir=args.out_dir)
+    print(f"[sandbox] 已生成: {dest}")
+    missing = missing_host_dirs(project_id, workspace_root=args.workspace_root)
+    if missing:
+        print(f"[WARN] 宿主目录缺失（沙箱运行前需创建）：{missing}")
+    return EXIT_OK
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="vl", description="VerityLens 编排层 CLI")
     sub = p.add_subparsers(dest="command")
@@ -273,8 +392,12 @@ def build_parser() -> argparse.ArgumentParser:
     sp.set_defaults(func=cmd_budget)
 
     sp = sub.add_parser("lock", help="制品写锁")
-    sp.add_argument("action", choices=["acquire", "release"])
-    sp.add_argument("artifact")
+    sp.add_argument("action", choices=["acquire", "release", "check"])
+    sp.add_argument("artifact", nargs="?", default=None, help="制品名（check 时可省略）")
+    sp.add_argument("--holder", default=None, help="持有者标识（如 researcher_b）")
+    sp.add_argument("--ttl", type=int, default=48 * 3600, help="锁有效期（秒），默认 48h")
+    sp.add_argument("--json", action="store_true", help="check：输出 JSON（供 hook 解析）")
+    sp.add_argument("--path", default=".", help="Workspace 目录")
     sp.set_defaults(func=cmd_lock)
 
     sp = sub.add_parser("bundle", help="生成 / 校验学科 Bundle")
@@ -297,6 +420,19 @@ def build_parser() -> argparse.ArgumentParser:
 
     sp = sub.add_parser("finalize", help="收尾导出")
     sp.set_defaults(func=cmd_finalize)
+
+    sp = sub.add_parser("sandbox", help="生成容器沙箱 compose")
+    sp.add_argument("project_id")
+    sp.add_argument("--workspace-root", default="workspaces", help="Workspace 根目录")
+    sp.add_argument("--out-dir", default="docker", help="compose 输出目录")
+    sp.add_argument("--check", action="store_true", help="仅校验安全基线，不写文件")
+    sp.set_defaults(func=cmd_sandbox)
+
+    sp = sub.add_parser("branch", help="Git 假设分支协作")
+    sp.add_argument("action", choices=["create", "merge", "status"])
+    sp.add_argument("hypothesis_id", nargs="?", default=None, help="假设 ID（create 时必填）")
+    sp.add_argument("--path", default=".", help="项目（Git 仓库）目录")
+    sp.set_defaults(func=cmd_branch)
 
     return p
 

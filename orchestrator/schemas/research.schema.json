@@ -27,7 +27,8 @@
     },
     "locks": {
       "type": "object",
-      "description": "制品写锁，key 为制品名，超时自动失效"
+      "description": "制品写锁，key 为制品名（如 manuscript），value 为锁条目；超时自动失效",
+      "additionalProperties": { "$ref": "#/$defs/lockEntry" }
     },
     "degraded_features": {
       "type": "array",
@@ -77,6 +78,17 @@
         "cap": { "type": "number", "minimum": 0 },
         "used": { "type": "number", "minimum": 0 }
       }
+    },
+    "lockEntry": {
+      "type": "object",
+      "required": ["holder", "acquired_at", "expires_at"],
+      "properties": {
+        "holder": { "type": "string", "minLength": 1 },
+        "acquired_at": { "type": "string" },
+        "expires_at": { "type": "string" },
+        "artifact": { "type": "string" }
+      },
+      "additionalProperties": false
     }
   }
 }

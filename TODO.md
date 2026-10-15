@@ -4,8 +4,16 @@
 
 ## 当前状态
 
-- **当前阶段**：Phase 2 已完成（Bundle 工厂 + biomed 升 L1 + HYP/EPIS 级联回流）
-- **下一步**：Phase 3 —— 容器沙箱 + RAG 侧车完整版 + 制品写锁 + Git 分支协作流
+- **当前阶段**：Phase 3 已完成（容器沙箱 + RAG 侧车完整版 + 制品写锁 + Git 分支协作流）
+- **下一步**：Phase 4（按需）—— L2 Bundle + 更多学科 + 协作模型按实际需求重评估
+
+## Phase 3：健壮性与协作 ✅ 2026-10-15
+
+- [x] 容器沙箱：`docker/sandbox-compose.yml`（no-new-privileges / cap_drop / network_mode none / read_only / tmpfs / 资源硬限）+ `orchestrator/sandbox.py` 生成器（按 PROJECT_ID 渲染 + 安全基线校验）+ `vl sandbox` 命令 + `docker/sandbox.md` 敏感数据治理管道
+- [x] RAG 侧车完整版：`sidecar/rag/literature_rag.py` 重写（分片/可插拔嵌入/向量检索/MMR 去重/会话缓存 LRU/token 预算/citation-only 降级/auto-archive），离线可测
+- [x] 制品写锁：`orchestrator/lock.py`（acquire/release/check + 超时失效 + 冲突检测）+ `vl lock` 命令 + `research.schema.json` 结构约束
+- [x] Git 分支协作流：`orchestrator/collab.py`（假设分支创建 / 合并前就绪检查 / --no-ff 合并）+ `vl branch` 命令 + `docs/collab.md`
+- [x] 测试：92 个用例全通过（含 lock / rag / sandbox / collab 新增）
 
 ## Phase 2：领域包化 + 失败闭环完备 ✅ 2026-10-15
 

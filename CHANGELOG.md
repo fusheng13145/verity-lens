@@ -2,6 +2,32 @@
 
 > 遵循 Keep a Changelog 风格，版本号 `MAJOR.MINOR.PATCH`。
 
+## [1.6.0] - 2026-10-15 — Phase 3 完成（健壮性与协作）
+
+### Added
+- **容器沙箱**：`docker/sandbox-compose.yml`（no-new-privileges / cap_drop ALL / network_mode none
+  / read_only / tmpfs / cpus·memory·pids 资源硬限；data/raw 只读、data/processed 可写）+ 生成器
+  `orchestrator/sandbox.py`（按 PROJECT_ID 渲染 + `validate_compose` 安全基线静态校验）+ `vl sandbox` 命令。
+- **RAG 侧车完整版** `sidecar/rag/literature_rag.py` 重写：语义分片（字符窗口 + overlap）、可插拔嵌入
+  （默认离线确定性 hash 向量）、向量检索 + 分数阈值、MMR 多样性重排、会话缓存（LRU）、token 预算
+  （软告警 / 硬上限触发 citation-only 降级）、auto-archive（超龄分片仅留元数据）。
+- **制品写锁** `orchestrator/lock.py`：acquire/release/check + 超时自动失效（默认 48h）+ 冲突检测
+  （先到先得，他人未过期锁拒绝接管）；`vl lock acquire/release/check`；`research.schema.json` 约束
+  `locks` 结构（holder/acquired_at/expires_at）。
+- **Git 分支协作流** `orchestrator/collab.py`：假设分支创建（`hypothesis/<id>`）+ 合并前就绪检查
+  （无未处理 failed 实验 + 阶段门禁通过）+ `--no-ff` 合并；`vl branch create/merge/status`；
+  `docs/collab.md` 写明协作边界、写锁协议、分支保护建议。
+- **文档**：新增 `docs/collab.md`、`docker/sandbox.md`。
+- **测试**：92 个用例全通过（新增 lock / rag / sandbox / collab 共 27 例）。
+
+### Changed
+- `orchestrator/gates.py` 新增 `save_project(workspace, data)`（保留中文与字段序写回 RESEARCH.yaml）。
+- `orchestrator/cli.py` 文档字符串更新为已实现的命令集。
+
+### Note
+- `pre_session.sh` 第④步写锁自动检查因安全审查未自动写入会话启动钩子；推荐片段已记录在
+  `docs/collab.md` §6，供团队按需启用。
+
 ## [1.5.0] - 2026-10-15 — Phase 2 完成（领域包化 + 级联回流）
 
 ### Added

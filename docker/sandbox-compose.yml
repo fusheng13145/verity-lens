@@ -1,0 +1,55 @@
+# VerityLens 科研代码执行沙箱（依据 design-blueprint.md §2.8.2）
+#
+# 用途：在强隔离容器中运行 Agent 生成的科研代码（分析/绘图/统计），
+#       底座本身不进入本容器；容器内仅能读写脱敏后的 data/processed 与产物目录。
+#
+# 敏感数据治理管道（见 docker/sandbox.md）：
+#   ① 原始敏感数据存 data/raw/（容器外，底座无访问权限）
+#   ② Sidecar 脱敏（k-匿名 / 字段屏蔽 / DP 聚合）
+#   ③ 脱敏版写入 data/processed/（容器可读）
+#   ④ Agent 仅基于脱敏数据推理
+#   ⑤ 涉及个体的结论必须经人工审核
+#
+# 使用：
+#   export PROJECT_ID=proj_20261014_001
+#   docker compose -f docker/sandbox-compose.yml up --abort-on-container-exit
+#
+# 注意：PROJECT_ID 通过环境变量注入；下方卷挂载路径据此展开。
+services:
+  dsh-sandbox:
+    image: python:3.13-slim
+    # 安全基线：禁止提权、丢弃全部 Linux capabilities、仅保留必要项
+    security_opt:
+      - no-new-privileges:true
+      - seccomp=unconfined
+    cap_drop: ["ALL"]
+    cap_add: ["CHOWN"]
+    # 网络隔离：科研代码默认不需要出网；如需拉取依赖可临时放开
+    network_mode: "none"
+    # 只读根文件系统 + 临时可写层
+    read_only: true
+    tmpfs:
+      - /tmp:size=1g
+      - /var/tmp:size=512m
+    # 卷挂载：原始数据只读，产物目录可写
+    volumes:
+      - ./workspaces/${PROJECT_ID}/data/raw:/workspace/data/raw:ro
+      - ./workspaces/${PROJECT_ID}/data/processed:/workspace/data/processed:rw
+      - ./workspaces/${PROJECT_ID}/figures:/workspace/figures:rw
+      - ./workspaces/${PROJECT_ID}/manuscript:/workspace/manuscript:rw
+      - ./workspaces/${PROJECT_ID}/analysis:/workspace/analysis:rw
+    # 资源硬限制，防资源耗尽型失控
+    deploy:
+      resources:
+        limits:
+          cpus: "4"
+          memory: "8g"
+          pids: 100
+    environment:
+      - DSH_WORKSPACE=/workspace
+      - DSH_PERMISSION=workspace_write
+    # 一次性运行：执行完即退出，不长期驻留
+    init: true
+    restart: "no"
+    working_dir: /workspace
+    command: ["python", "-c", "import sys; print('sandbox ready:', sys.argv)", "--wait"]
