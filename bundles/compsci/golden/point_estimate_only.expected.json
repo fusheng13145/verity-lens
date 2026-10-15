@@ -1,0 +1,9 @@
+{
+  "problems": [
+    "R1 随机种子 random_seed 必须是非负整数",
+    "R2 n_runs 必须为整数且 >= 3（当前：1）",
+    "R3 environment 必须非空（框架/依赖/硬件/确定性设置）",
+    "R4 data_hash 或 code_hash 至少其一非空",
+    "R5 std 必须是 >=0 的数值（禁止只报点估计）"
+  ]
+}

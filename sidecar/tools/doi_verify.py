@@ -70,3 +70,11 @@ def run(doi: str, timeout: float = 10.0, expected_title: str | None = None) -> d
             metadata_match = None
 
     return {"doi": d, "exists": True, "metadata_match": metadata_match, "error": None}
+
+
+if __name__ == "__main__":
+    import sys
+
+    from sidecar.tools._stdio import serve
+
+    sys.exit(serve(run))

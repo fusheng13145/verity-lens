@@ -69,8 +69,58 @@ def new_bundle(discipline: str, target_dir: Path | str, capability: str = "core"
     return dest
 
 
+def validate_preset_patch_declaration(patch: object) -> list[str]:
+    """校验 preset_patch 声明结构，返回问题列表（空=合规）。
+
+    结构约定（L2 必需，bundle-registry.md §3）：
+        preset_patch:
+          preset: "verity-research"      # 必填：目标 Preset 名
+          system_prompt: "..."           # 可选：注入系统提示的片段
+          tool_whitelist: ["stat_test"]  # 可选：工具白名单
+    """
+    if not isinstance(patch, dict):
+        return ["preset_patch 必须为映射"]
+    problems: list[str] = []
+    if not patch.get("preset"):
+        problems.append("preset_patch.preset 不能为空")
+    if not isinstance(patch.get("tool_whitelist", []), list):
+        problems.append("preset_patch.tool_whitelist 必须为列表")
+    return problems
+
+
+def validate_mcp_declaration(mcp: object) -> list[str]:
+    """校验 mcp 声明结构，返回问题列表（空=合规）。
+
+    结构约定（L2 必需，bundle-registry.md §3）：
+        mcp:
+          servers:
+            - name: "verity-stat-test"
+              command: ["python", "-m", "sidecar.tools.stat_test"]
+              tools: ["stat_test"]
+    """
+    if not isinstance(mcp, dict):
+        return ["mcp 必须为映射（含 servers 列表）"]
+    servers = mcp.get("servers")
+    if not isinstance(servers, list) or not servers:
+        return ["mcp.servers 必须为非空列表"]
+    problems: list[str] = []
+    for i, srv in enumerate(servers):
+        if not isinstance(srv, dict):
+            problems.append(f"mcp.servers[{i}] 必须为映射")
+            continue
+        if not srv.get("name"):
+            problems.append(f"mcp.servers[{i}] 缺少 name")
+        if not srv.get("command") and not srv.get("url"):
+            problems.append(f"mcp.servers[{i}] 缺少 command/url")
+    return problems
+
+
 def validate_bundle(bundle_dir: Path | str) -> list[str]:
-    """校验 Bundle 结构是否合规，返回问题列表（空=通过）。"""
+    """校验 Bundle 结构是否合规，返回问题列表（空=通过）。
+
+    L2 追加规则（design-blueprint.md §2.6）：preset_patch + mcp 声明 +
+    golden_cases 三者齐备且文件存在，否则不得标称 L2。
+    """
     d = Path(bundle_dir)
     problems: list[str] = []
 
@@ -95,5 +145,22 @@ def validate_bundle(bundle_dir: Path | str) -> list[str]:
     for rel in data.get("skills") or []:
         if not (d / rel).exists():
             problems.append(f"声明的 Skill 不存在: {rel}")
+
+    if data.get("level") == "L2":
+        if not data.get("preset_patch"):
+            problems.append("L2 必须声明 preset_patch")
+        else:
+            problems.extend(validate_preset_patch_declaration(data["preset_patch"]))
+        if not data.get("mcp"):
+            problems.append("L2 必须声明 mcp")
+        else:
+            problems.extend(validate_mcp_declaration(data["mcp"]))
+        golden = data.get("golden_cases")
+        if not isinstance(golden, list) or not golden:
+            problems.append("L2 必须声明 golden_cases（非空列表）")
+        else:
+            for rel in golden:
+                if not (d / rel).exists():
+                    problems.append(f"golden_cases 文件不存在: {rel}")
 
     return problems

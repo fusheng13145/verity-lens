@@ -61,7 +61,8 @@ vl            # 打印全部子命令与用法
 | `vl budget check` | 读 token_budget，超限报 HARD_BLOCK | 0/3(硬阻断) |
 | `vl lock <acquire\|release\|check> <artifact>` | 管理制品写锁（先到先得 + 超时失效） | 0/2(冲突) |
 | `vl bundle new <discipline> [--capability <cap>]` | 生成 L0 学科 Bundle 骨架 | 0/1 |
-| `vl bundle validate <bundle_dir>` | 校验 Bundle 结构合规 | 0/2 |
+| `vl bundle validate <bundle_dir>` | 校验 Bundle 结构合规（L2 强制 preset_patch/mcp/golden_cases） | 0/2 |
+| `vl bundle load <bundle_dir>` | 加载 Bundle 到运行底座（Skill/MCP/Preset 注册，能力缺失显式降级） | 0/2 |
 | `vl finalize --path <ws>` | 收尾校验 + 生成 finalize_report.md（含 AI 贡献声明草稿） | 0(ready)/2(blocked) |
 | `vl sandbox <project_id>` | 生成/校验容器沙箱 compose | 0/2 |
 | `vl branch <create\|merge\|status>` | Git 假设分支协作流 | 0/2 |
@@ -93,6 +94,6 @@ npm run dev                  # http://localhost:5173
 
 ## 状态
 
-- 当前阶段：**核心闭环已落地（Phase 0–4b）** —— 文件即状态门禁、失败驱动迭代、学科包化（biomed / materials / compsci 三学科均 L1）、容器沙箱、RAG 侧车、制品写锁、Git 协作流、`vl finalize` 收尾闭环。详见 [`TODO.md`](TODO.md) 与 [`CHANGELOG.md`](CHANGELOG.md)。
-- 下一步（Phase 4c，依赖 DSH 底座真实化）：三学科升 L2（Preset Patch + MCP + Golden 用例）+ 协作模型按真实痛点重评估。
+- 当前阶段：**核心闭环已落地（Phase 0–4c 部分）** —— 文件即状态门禁、失败驱动迭代、学科包化（biomed / materials / compsci 三学科均 **L2**：Preset Patch + MCP 声明 + Golden 用例，`vl bundle load` 一键加载）、容器沙箱、RAG 侧车、制品写锁、Git 协作流、`vl finalize` 收尾闭环。详见 [`TODO.md`](TODO.md) 与 [`CHANGELOG.md`](CHANGELOG.md)。
+- 下一步（Phase 4c 收尾）：DSH 底座真实化后的端到端联调（真实 `dsh` 接入 + L2 轨迹回归 edit distance ≤2）+ 协作模型按真实痛点重评估。
 - 功能范围与成功指标见 [`docs/project-spec.md`](docs/project-spec.md)。

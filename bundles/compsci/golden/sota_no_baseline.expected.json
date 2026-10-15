@@ -1,0 +1,5 @@
+{
+  "problems": [
+    "R6 基线对比须含 baseline_delta 或 baseline_p"
+  ]
+}

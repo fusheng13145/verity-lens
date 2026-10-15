@@ -1,8 +1,8 @@
-# Bundle 清单 — biomed（生物医学）L1
-# 仅声明 Skill 路径 / Preset Patch（可选）/ MCP 配置（可选）。
-# 加载逻辑由编排层实现（复制到 HAL 注册接口），不直接调用底座内核。
+# Bundle 清单 — biomed（生物医学）L2
+# 仅声明 Skill 路径 / Preset Patch / MCP 配置。
+# 加载逻辑由编排层实现（orchestrator/bundle_loader.py → HAL 注册接口），不直接调用底座内核。
 name: "biomed"
-level: "L1"
+level: "L2"
 discipline: "biomed"
 description: "生物医学科研方法论约束：统计报告规范（效应量+95%CI+p 值，确定性校验）+ 文献综述结构"
 
@@ -10,6 +10,34 @@ skills:
   - skills/biomed-stats/SKILL.md
   - skills/biomed-literature/SKILL.md
 
-# L0 阶段不引入 Preset 补丁与 MCP，避免过早复杂化（见 design-blueprint.md §2.6）
-preset_patch: null
-mcp: null
+# L2：Preset 补丁（学科方法论注入系统提示；由 SKILL.md 蒸馏，蓝图表 §2.1 降级表）
+preset_patch:
+  preset: "verity-research"
+  system_prompt: |
+    生物医学统计报告规范（biomed-stats）：
+    1. 所有效应量必须报告具体数值及 95% 置信区间；
+    2. P 值报告精确值，禁止仅报告 p<0.05；
+    3. 多重比较必须说明校正方法（Bonferroni / Benjamini-Hochberg FDR）；
+    4. 禁止仅报告 p 值而不报告效应量，禁止用"显著"替代具体数值。
+    关键数值（p 值 / 效应量 / CI）必须经 sidecar stat_test 工具复算，不得自行产出。
+  tool_whitelist: ["stat_test", "doi_verify"]
+
+# L2：MCP 服务声明（sidecar 确定性工具，stdio 协议；入口见 sidecar/tools/_stdio.py）
+mcp:
+  servers:
+    - name: "verity-stat-test"
+      transport: "stdio"
+      command: ["python", "-m", "sidecar.tools.stat_test"]
+      tools: ["stat_test"]
+      description: "统计检验（p 值 / 效应量 / 95% CI），确定性复算"
+    - name: "verity-doi-verify"
+      transport: "stdio"
+      command: ["python", "-m", "sidecar.tools.doi_verify"]
+      tools: ["doi_verify"]
+      description: "DOI 归一化 + Crossref 存在性校验，网络降级"
+
+# L2：Golden 用例（L1 验证脚本的输入/期望输出对，tests/golden/test_bundle_golden.py 回归）
+golden_cases:
+  - golden/stats_ok.input.json
+  - golden/stats_p_only.input.json
+  - golden/stats_bad_ci.input.json

@@ -1,16 +1,43 @@
-# Bundle 清单 — materials（材料科学）L1 可用
-# 仅声明 Skill 路径 / Preset Patch（可选）/ MCP 配置（可选）。
-# 加载逻辑由编排层实现（复制到 HAL 注册接口），不直接调用底座内核。
+# Bundle 清单 — materials（材料科学）L2
+# 仅声明 Skill 路径 / Preset Patch / MCP 配置。
+# 加载逻辑由编排层实现（orchestrator/bundle_loader.py → HAL 注册接口），不直接调用底座内核。
 name: "materials"
-level: "L1"
+level: "L2"
 discipline: "materials"
-description: "材料科学科研方法论约束：表征不确定度规范 + 文献综述结构（L0→L1）"
+description: "材料科学方法论约束：表征不确定度规范（不确定度必报 / n≥3 / 单位 / 仪器）+ 文献证据分级"
 
 skills:
   - skills/materials-characterization/SKILL.md
   - skills/materials-literature/SKILL.md
 
-# L0 不引入 Preset 补丁与 MCP，避免过早复杂化（见 design-blueprint.md §2.6）
-# 升级到 L2 时再补 preset_patch 与 mcp
-preset_patch: null
-mcp: null
+# L2：Preset 补丁（学科方法论注入系统提示；由 SKILL.md 蒸馏，蓝图表 §2.1 降级表）
+preset_patch:
+  preset: "verity-research"
+  system_prompt: |
+    材料表征报告规范（materials-characterization）：
+    1. 任何量化指标必须报告不确定度（标准偏差 / 标准误），禁止只报单点值；
+    2. 单位必须显式标注（nm、cm²/g、eV 等），不得隐式省略；
+    3. 重复测量 n≥3，禁止用单次测量值代表批次性能；
+    4. XRD 峰未扣除仪器宽化不得直接套用 Scherrer 公式。
+    关键数值必须经 sidecar 确定性工具复算，不得自行产出。
+  tool_whitelist: ["stat_test", "doi_verify"]
+
+# L2：MCP 服务声明（sidecar 确定性工具，stdio 协议；入口见 sidecar/tools/_stdio.py）
+mcp:
+  servers:
+    - name: "verity-stat-test"
+      transport: "stdio"
+      command: ["python", "-m", "sidecar.tools.stat_test"]
+      tools: ["stat_test"]
+      description: "统计检验（p 值 / 效应量 / 95% CI），确定性复算"
+    - name: "verity-doi-verify"
+      transport: "stdio"
+      command: ["python", "-m", "sidecar.tools.doi_verify"]
+      tools: ["doi_verify"]
+      description: "DOI 归一化 + Crossref 存在性校验，网络降级"
+
+# L2：Golden 用例（L1 验证脚本的输入/期望输出对，tests/golden/test_bundle_golden.py 回归）
+golden_cases:
+  - golden/bet_ok.input.json
+  - golden/single_point.input.json
+  - golden/no_uncertainty.input.json

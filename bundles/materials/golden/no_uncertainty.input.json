@@ -1,0 +1,9 @@
+{
+  "sample_id": "TiO2-P25-03",
+  "method": "XRD-Scherrer",
+  "value": 12.8,
+  "uncertainty": null,
+  "unit": "nm",
+  "instrument": "Rigaku SmartLab",
+  "n_repeats": 3
+}

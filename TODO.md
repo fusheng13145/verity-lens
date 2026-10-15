@@ -7,7 +7,8 @@
 - **当前阶段**：Phase 4 进行中（扩展评估）
   - Phase 4a ✅ 2026-10-15：materials 学科包（L0→L1）+ `vl finalize` 真实收尾闭环 + 实验可复现元数据
   - Phase 4b ✅ 2026-10-15：compsci 第三学科（L0→L1）+ biomed 正式升 L1 + README 命名统一为 verity-lens
-- **下一步**：L2 Bundle（biomed/materials/compsci 补 Preset Patch + MCP + Golden，待 DSH 底座真实化）+ 协作模型按真实痛点重评估（不预设方案）
+  - Phase 4c 🟡 2026-10-15：三学科升 L2（preset_patch + MCP 声明 + Golden 用例）+ `vl bundle load` 加载器 + numpy/scipy 补装；**待真实 DSH 联调**（dsh 二进制接入后的端到端"换 Bundle 即切换学科"演练 + L2 轨迹回归 edit distance 口径）
+- **下一步**：DSH 底座真实化后的联调验证 + 协作模型按真实痛点重评估（不预设方案）
 
 ## Phase 4：扩展评估（按需）
 
@@ -21,8 +22,12 @@
   - [x] biomed 正式升 L1（`bundle.yml` level 字段同步；L1 校验脚本与 literature 早已具备）
   - [x] README 项目名统一为 kebab-case `verity-lens（真理之眼）`，与包名/目录一致
   - [x] 测试：101 个用例通过（新增第三学科共存校验 1）
-- [ ] **Phase 4c**（待启动，依赖 DSH 底座真实化）
-  - [ ] biomed / materials / compsci 升 L2：补 Preset Patch + MCP 声明 + Golden 用例
+- [ ] **Phase 4c**（部分完成 2026-10-15；联调待 DSH 底座真实化）
+  - [x] biomed / materials / compsci 升 L2：补 Preset Patch + MCP 声明 + Golden 用例（每学科 3 例，`vl bundle validate` 强制三要素）
+  - [x] Bundle 加载器 `orchestrator/bundle_loader.py` + `vl bundle load`：bundle.yml → HAL 注册 Skill/MCP/Preset，能力缺失显式降级（不静默）
+  - [x] sidecar 工具 stdio 入口（`python -m sidecar.tools.<tool>`，stdin/stdout JSON）：MCP 声明可执行，非纸面配置
+  - [x] numpy 2.5.4 / scipy 1.18.1 补装（Phase 0 遗留）：stat_test 真实统计路径生效
+  - [ ] DSH 真实化联调：dsh 二进制接入后端到端"换 Bundle 即切换学科"演练 + L2 轨迹回归（edit distance ≤2）
   - [ ] 协作模型按真实痛点重评估（蓝图明确"不预设方案"，待 1–10 人团队实际协作反馈）
 
 ## Phase 3：健壮性与协作 ✅ 2026-10-15

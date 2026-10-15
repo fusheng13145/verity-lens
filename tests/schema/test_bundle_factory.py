@@ -103,18 +103,18 @@ def test_factory_supports_multiple_disciplines(tmp_path):
 
 
 def test_materials_bundle_validates():
-    """锁定仓库内已交付的 materials L1 Bundle 结构合规。"""
+    """锁定仓库内已交付的 materials L2 Bundle 结构合规。"""
     materials = REPO_ROOT / "bundles" / "materials"
     problems = validate_bundle(materials)
     assert problems == [], problems
 
 
 def test_three_disciplines_coexist():
-    """Phase 4b：biomed / materials / compsci 三学科并存、互不污染、结构合规。"""
+    """Phase 4b→4c：biomed / materials / compsci 三学科并存、均达 L2、结构合规。"""
     disciplines = {
-        "biomed": ("L1", {"biomed-stats", "biomed-literature"}),
-        "materials": ("L1", {"materials-characterization", "materials-literature"}),
-        "compsci": ("L1", {"compsci-computation", "compsci-literature"}),
+        "biomed": ("L2", {"biomed-stats", "biomed-literature"}),
+        "materials": ("L2", {"materials-characterization", "materials-literature"}),
+        "compsci": ("L2", {"compsci-computation", "compsci-literature"}),
     }
     seen_disciplines: set[str] = set()
     for name, (level, skills) in disciplines.items():
@@ -124,8 +124,94 @@ def test_three_disciplines_coexist():
         data = yaml.safe_load((d / "bundle.yml").read_text(encoding="utf-8"))
         assert data["discipline"] == name
         assert data["level"] == level
+        # L2 三要素齐备
+        assert data["preset_patch"]["preset"] == "verity-research"
+        assert {s["name"] for s in data["mcp"]["servers"]} == {
+            "verity-stat-test", "verity-doi-verify"
+        }
+        assert len(data["golden_cases"]) >= 1
         skill_dirs = {p.parent.name for p in d.glob("skills/*/SKILL.md")}
         assert skill_dirs == skills, f"{name}: {skill_dirs}"
         seen_disciplines.add(name)
     # 三个不同学科，互不重名
     assert seen_disciplines == {"biomed", "materials", "compsci"}
+
+
+def test_validate_l2_requires_preset_mcp_golden(tmp_path):
+    """L2 三要素（preset_patch / mcp / golden_cases）缺一不可。"""
+    d = tmp_path / "l2bad"
+    (d / "skills" / "l2bad-core").mkdir(parents=True)
+    (d / "skills" / "l2bad-core" / "SKILL.md").write_text("# x", encoding="utf-8")
+    (d / "bundle.yml").write_text(
+        'name: "l2bad"\nlevel: "L2"\ndiscipline: "l2bad"\n'
+        "skills:/n  - skills/l2bad-core/SKILL.md\n",
+        encoding="utf-8",
+    )
+    problems = validate_bundle(d)
+    assert any("preset_patch" in p for p in problems)
+    assert any("mcp" in p for p in problems)
+    assert any("golden_cases" in p for p in problems)
+
+
+def test_validate_l2_bad_mcp_server(tmp_path):
+    d = tmp_path / "l2mcp"
+    (d / "skills" / "l2mcp-core").mkdir(parents=True)
+    (d / "skills" / "l2mcp-core" / "SKILL.md").write_text("# x", encoding="utf-8")
+    (d / "bundle.yml").write_text(
+        'name: "l2mcp"\nlevel: "L2"\ndiscipline: "l2mcp"\n'
+        "skills:/n  - skills/l2mcp-core/SKILL.md\n"
+        "preset_patch:/n  preset: p\n"
+        "mcp:/n  servers:/n    - transport: stdio\n"
+        "golden_cases:/n  - golden/x.input.json\n",
+        encoding="utf-8",
+    )
+    problems = validate_bundle(d)
+    assert any("mcp.servers[0] 缺少 name" in p for p in problems)
+    assert any("mcp.servers[0] 缺少 command/url" in p for p in problems)
+    assert any("golden_cases 文件不存在" in p for p in problems)
+
+
+def test_l0_l1_may_omit_l2_fields(tmp_path):
+    """L0/L1 不强制 preset_patch / mcp / golden_cases（渐进升级）。"""
+    d = new_bundle("chem", tmp_path, capability="spectro")
+    assert validate_bundle(d) == []
+
+
+def test_validate_l2_requires_preset_mcp_golden(tmp_path):
+    """L2 三要素（preset_patch / mcp / golden_cases）缺一不可。"""
+    d = tmp_path / "l2bad"
+    (d / "skills" / "l2bad-core").mkdir(parents=True)
+    (d / "skills" / "l2bad-core" / "SKILL.md").write_text("# x", encoding="utf-8")
+    (d / "bundle.yml").write_text(
+        'name: "l2bad"\nlevel: "L2"\ndiscipline: "l2bad"\n'
+        "skills:\n  - skills/l2bad-core/SKILL.md\n",
+        encoding="utf-8",
+    )
+    problems = validate_bundle(d)
+    assert any("preset_patch" in p for p in problems)
+    assert any("mcp" in p for p in problems)
+    assert any("golden_cases" in p for p in problems)
+
+
+def test_validate_l2_bad_mcp_server(tmp_path):
+    d = tmp_path / "l2mcp"
+    (d / "skills" / "l2mcp-core").mkdir(parents=True)
+    (d / "skills" / "l2mcp-core" / "SKILL.md").write_text("# x", encoding="utf-8")
+    (d / "bundle.yml").write_text(
+        'name: "l2mcp"\nlevel: "L2"\ndiscipline: "l2mcp"\n'
+        "skills:\n  - skills/l2mcp-core/SKILL.md\n"
+        "preset_patch:\n  preset: p\n"
+        "mcp:\n  servers:\n    - transport: stdio\n"
+        "golden_cases:\n  - golden/x.input.json\n",
+        encoding="utf-8",
+    )
+    problems = validate_bundle(d)
+    assert any("mcp.servers[0] 缺少 name" in p for p in problems)
+    assert any("mcp.servers[0] 缺少 command/url" in p for p in problems)
+    assert any("golden_cases 文件不存在" in p for p in problems)
+
+
+def test_l0_l1_may_omit_l2_fields(tmp_path):
+    """L0/L1 不强制 preset_patch / mcp / golden_cases（渐进升级）。"""
+    d = new_bundle("chem", tmp_path, capability="spectro")
+    assert validate_bundle(d) == []

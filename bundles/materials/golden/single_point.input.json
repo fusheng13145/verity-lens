@@ -1,0 +1,9 @@
+{
+  "sample_id": "TiO2-P25-02",
+  "method": "BET",
+  "value": 86.4,
+  "uncertainty": 0,
+  "unit": "m²/g",
+  "instrument": "ASAP 2460",
+  "n_repeats": 1
+}

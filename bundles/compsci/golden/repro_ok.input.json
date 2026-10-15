@@ -1,0 +1,13 @@
+{
+  "random_seed": 42,
+  "n_runs": 5,
+  "environment": "torch 2.4.0+cpu / python 3.11 / cudnn n/a（CPU 确定性）",
+  "data_hash": "sha256:9f2c1a...",
+  "code_hash": "sha256:71bd0e...",
+  "value": 0.9231,
+  "std": 0.0087,
+  "baseline": {
+    "baseline_delta": 0.0312,
+    "baseline_p": 0.004
+  }
+}

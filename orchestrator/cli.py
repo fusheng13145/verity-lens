@@ -6,6 +6,7 @@ Phase 1：loop / budget
 Phase 2：bundle（工厂 + 校验）
 Phase 3：lock / sandbox / branch
 Phase 4：finalize（真实收尾闭环，含可复现元数据校验）
+Phase 4c：bundle load（bundle.yml → HAL 注册，能力缺失显式降级）
 """
 from __future__ import annotations
 
@@ -262,7 +263,7 @@ def cmd_lock(args) -> int:
 
 
 def cmd_bundle(args) -> int:
-    """生成学科 L0 Bundle 骨架，或校验已有 Bundle 结构。"""
+    """生成学科 L0 Bundle 骨架 / 校验结构 / 加载到运行底座。"""
     from orchestrator.bundle_factory import (
         BundleExistsError,
         INTERVIEW_TEMPLATE,
@@ -282,6 +283,29 @@ def cmd_bundle(args) -> int:
                 print(f"  {i}. {msg}")
             return EXIT_BLOCKED
         print("[PASS] Bundle 结构合规")
+        return EXIT_OK
+
+    if args.action == "load":
+        from orchestrator.bundle_loader import BundleLoadError, load_bundle
+
+        try:
+            report = load_bundle(Path(args.discipline))
+        except BundleLoadError as exc:
+            print(f"[ERROR] {exc}")
+            return EXIT_ERROR
+        if not report.ok:
+            print(f"[BLOCKED] Bundle 加载失败（{len(report.problems)} 项）：")
+            for i, msg in enumerate(report.problems, 1):
+                print(f"  {i}. {msg}")
+            return EXIT_BLOCKED
+        print(f"[bundle] 已加载 {report.bundle}（{report.level}）")
+        print(f"[bundle] Skill 注册: {len(report.skills)} 个")
+        if report.mcp_servers:
+            print(f"[bundle] MCP 声明: {', '.join(report.mcp_servers)}")
+        if report.preset:
+            print(f"[bundle] Preset 补丁: {report.preset}")
+        for msg in report.degradations:
+            print(f"[DEGRADED] {msg}")
         return EXIT_OK
 
     # action == new
@@ -414,18 +438,18 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--path", default=".", help="Workspace 目录")
     sp.set_defaults(func=cmd_lock)
 
-    sp = sub.add_parser("bundle", help="生成 / 校验学科 Bundle")
+    sp = sub.add_parser("bundle", help="生成 / 校验 / 加载学科 Bundle")
     sp.add_argument(
         "action",
         nargs="?",
         default="new",
-        choices=["new", "validate"],
-        help="new=生成 L0 骨架；validate=校验结构",
+        choices=["new", "validate", "load"],
+        help="new=生成 L0 骨架；validate=校验结构；load=加载到运行底座（HAL 注册）",
     )
     sp.add_argument(
         "discipline",
         nargs="?",
-        help="学科标识；validate 时传 Bundle 目录路径（--interview 时可省略）",
+        help="学科标识；validate/load 时传 Bundle 目录路径（--interview 时可省略）",
     )
     sp.add_argument("--path", default="bundles", help="Bundle 根目录（new 时）")
     sp.add_argument("--capability", default="core", help="首个 Skill 的能力名（new 时）")

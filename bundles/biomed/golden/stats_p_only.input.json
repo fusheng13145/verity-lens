@@ -1,0 +1,8 @@
+{
+  "comparison": "drug vs placebo",
+  "metric": "mean_difference",
+  "effect_size": null,
+  "ci_95": null,
+  "p_value": 0.023,
+  "test_used": "welch"
+}

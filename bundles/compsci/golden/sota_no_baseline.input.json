@@ -1,0 +1,12 @@
+{
+  "random_seed": 7,
+  "n_runs": 3,
+  "environment": "torch 2.4.0+cpu / python 3.11",
+  "data_hash": "sha256:abc123...",
+  "code_hash": "sha256:def456...",
+  "value": 0.9104,
+  "std": 0.0061,
+  "baseline": {
+    "note": "SOTA（无量化对比）"
+  }
+}

@@ -24,11 +24,11 @@
 - **依赖**：failure_ledger schema、Sidecar 功效分析（复核）、假设树。
 - **耦合边界**：不自动改写假设树，只生成"回流建议包"由人确认。
 
-## 4. Bundle 工厂（领域包体系）`orchestrator/bundle_factory.py` + `bundles/`
-- **职责**：半自动生成学科 Bundle（L0/L1/L2），专家访谈式产出。
-- **公开接口**：`vl bundle new <discipline>`；`_template/` 骨架。
-- **依赖**：编排层加载逻辑（复制到 HAL 注册）；通用 `skills/`。
-- **耦合边界**：bundle.yml 只声明 Skill/Preset Patch/MCP，不直接调用底座内核。
+## 4. Bundle 工厂 + 加载器（领域包体系）`orchestrator/bundle_factory.py` + `orchestrator/bundle_loader.py` + `bundles/`
+- **职责**：半自动生成学科 Bundle（L0/L1/L2）；把 bundle.yml 声明注册到运行底座。
+- **公开接口**：`vl bundle new <discipline>`；`vl bundle validate <dir>`；`vl bundle load <dir>`；`_template/` 骨架。
+- **依赖**：编排层加载逻辑（bundle_loader → HAL `register_skills` / `declare_mcp_servers` / `apply_preset_patch`）；通用 `skills/`。
+- **耦合边界**：bundle.yml 只声明 Skill/Preset Patch/MCP/golden_cases，不直接调用底座内核；能力缺失（mcp/preset_patch）必须显式降级并记录，禁止静默失败（design-blueprint.md §2.1 降级表）。
 
 ## 5. 侧车层（Sidecar）`sidecar/`
 - **职责**：确定性计算与外部对接（RAG/DOI/统计/功效/图表/脱敏/HPC）。

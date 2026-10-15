@@ -48,12 +48,13 @@ class HarnessAdapter(Protocol):
 | `vl budget check` | — | 读 token_budget，超限报 HARD_BLOCK | 0/3(硬阻断) |
 | `vl lock` | `<acquire\|release\|check> <artifact>` | 管理制品写锁 | 0/2(冲突) |
 | `vl bundle new` | `<discipline>` | 生成 L0 Bundle 骨架 | 0/1 |
-| `vl bundle validate` | `<bundle_dir>` | 校验 Bundle 结构合规 | 0/2 |
+| `vl bundle validate` | `<bundle_dir>` | 校验 Bundle 结构合规（L2 追加 preset_patch/mcp/golden_cases 三要素） | 0/2 |
+| `vl bundle load` | `<bundle_dir>` | 加载 Bundle 到运行底座：HAL 注册 Skill / MCP / Preset Patch；能力缺失显式降级并输出 | 0/2 |
 | `vl finalize` | `--path <ws>` | 收尾校验：全实验终态 + 无未处理失败 + analysis/figures 就绪 + 可复现元数据完整度；生成 finalize_report.md | 0(ready)/2(blocked) |
 | `vl sandbox` | `<project_id>` | 生成/校验容器沙箱 compose | 0/2 |
 | `vl branch` | `<create\|merge\|status>` | Git 假设分支协作 | 0/2 |
 
-实现状态：Phase 0 实现 `init` / `gate`；Phase 1 实现 `loop` / `budget`；Phase 2 实现 `bundle`（工厂 + 校验）；Phase 3 实现 `lock` / `sandbox` / `branch`；Phase 4a 实现 `finalize`（真实收尾闭环，含可复现元数据校验）。
+实现状态：Phase 0 实现 `init` / `gate`；Phase 1 实现 `loop` / `budget`；Phase 2 实现 `bundle`（工厂 + 校验）；Phase 3 实现 `lock` / `sandbox` / `branch`；Phase 4a 实现 `finalize`（真实收尾闭环，含可复现元数据校验）；Phase 4c 实现 `bundle load`（bundle.yml → HAL 注册，能力缺失显式降级）。
 
 ## 2.1 Headless API 契约（供 Web 前端）
 
@@ -85,7 +86,8 @@ class HarnessAdapter(Protocol):
 
 ## 4. MCP Server 契约
 
-- 标准 MCP 协议；声明在 `bundles/*/mcp/*.yml` 或 `sidecar/mcp/`。
+- 标准 MCP 协议；Bundle 侧声明在各 `bundles/<discipline>/bundle.yml` 的 `mcp.servers`（name / transport / command / tools），由 `vl bundle load` 经 HAL `declare_mcp_servers` 注册。
+- sidecar 确定性工具提供 stdio 入口：`python -m sidecar.tools.<tool>`（stdin JSON 参数 → stdout JSON 结果，见 `sidecar/tools/_stdio.py`），使 MCP 声明可执行而非纸面配置。
 - 适用：需长期运行、多客户端、标准协议的外部服务（OpenAlex/PubMed、HPC 状态）。
 - 注册经 HAL `declare_mcp_servers`。
 

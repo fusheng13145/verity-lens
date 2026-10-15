@@ -105,3 +105,11 @@ def run(group_a, group_b, test: str = "t-test", alpha: float = 0.05) -> dict:
         "n_a": len(a),
         "n_b": len(b),
     }
+
+
+if __name__ == "__main__":
+    import sys
+
+    from sidecar.tools._stdio import serve
+
+    sys.exit(serve(run))

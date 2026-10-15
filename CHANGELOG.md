@@ -2,6 +2,26 @@
 
 > 遵循 Keep a Changelog 风格，版本号 `MAJOR.MINOR.PATCH`。
 
+## [1.9.0] - 2026-10-15 — Phase 4c（三学科升 L2 + Bundle 加载器）
+
+### Added
+- **三学科 Bundle 升 L2**（biomed 0.3.0 / materials 0.2.0 / compsci 0.2.0）：
+  - `preset_patch`：preset `verity-research` + 由 SKILL.md 蒸馏的学科 system_prompt + tool_whitelist（stat_test / doi_verify）；
+  - `mcp.servers`：sidecar 确定性工具声明（`verity-stat-test` / `verity-doi-verify`，stdio）；
+  - `golden_cases`：每学科 3 例（合规通过 / 典型违规 ×2），`tests/golden/test_bundle_golden.py` 回归，实际问题列表与期望逐字一致（防验证脚本放水）。
+- **Bundle 加载器** `orchestrator/bundle_loader.py` + CLI `vl bundle load <dir>`：bundle.yml → HAL `register_skills` / `declare_mcp_servers` / `apply_preset_patch`；能力缺失显式降级并输出（mcp 缺失 → 编排层直连 sidecar；preset_patch 缺失 → 启动参数注入），禁止静默失败（蓝图 §2.1 降级表）。
+- **sidecar 工具 stdio 入口** `sidecar/tools/_stdio.py`：`python -m sidecar.tools.stat_test|doi_verify`，stdin JSON 参数 → stdout JSON 结果；MCP 声明从此可执行，非纸面配置。
+- **L2 校验规则**：`validate_bundle` 对 L2 强制 preset_patch / mcp / golden_cases 三要素（结构 + 文件存在性）；L0/L1 不强制（渐进升级）。
+
+### Fixed
+- **numpy 2.5.4 / scipy 1.18.1 补装**（Phase 0 遗留）：`stat_test` 真实统计路径生效（此前依赖缺失时降级为 skipped）；pyproject 核心依赖声明与 .venv 实际状态一致。
+
+### Tests
+- 新增 `tests/golden/test_bundle_golden.py`（9 例：三学科 golden 回归）、`tests/golden/test_bundle_loader.py`（6 例：注册/降级/阻断）、`tests/sidecar/test_stdio_entry.py`（2 例：stdio 入口）、`tests/schema/test_bundle_factory.py` 追加 L2 规则 3 例。
+- 全量 **125 个用例**通过（原 101 + 新增 24）。
+
+> 注：L2 的端到端联调（真实 `dsh` 二进制接入后的"换 Bundle 即切换学科"演练 + 轨迹回归 edit distance ≤2）留待底座真实化；当前 HAL 适配器在底座缺失时已按契约全量降级并有测试锁定。
+
 ## [1.8.0] - 2026-10-15 — Phase 4b（第三学科 + 命名统一）
 
 ### Added
