@@ -11,7 +11,7 @@
 | 层 | 技术 | 说明 |
 |----|------|------|
 | 运行底座 | DeepSeek Harness（DSH） | agent loop / 子代理 / 会话日志 / 沙箱；经 `hal/` 适配层隔离 |
-| 后端 | Python ≥3.11（FastAPI + Typer） | 编排层（Orchestrator Lite）、HAL 适配层、Sidecar 确定性工具 |
+| 后端 | Python ≥3.11（FastAPI + argparse） | 编排层（Orchestrator Lite）、HAL 适配层、Sidecar 确定性工具 |
 | 前端 | React 18 + Vite + TypeScript | 阶段看板 / HITL 审批页 / 失败登记簿（扩展交互面，对接 Headless API） |
 | 协作 | Git（假设分支 + 制品写锁 + PR review） | 多人并行研究，非实时共享会话 |
 | 文档 | Markdown 文档体系（`docs/`） | 架构 / 模块 / 接口 / 角色 / 数据 / 部署 / 前端规范 |
@@ -48,8 +48,25 @@ source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -e .
 
 # 3. 验证 CLI
-vl            # 打印帮助（完整子命令在 Phase 0 实现）
+vl            # 打印全部子命令与用法
 ```
+
+### CLI 命令一览
+
+| 命令 | 作用 | 退出码 |
+|------|------|--------|
+| `vl init <discipline>` | 生成 Workspace 脚手架 + 挂载学科 Bundle | 0/1 |
+| `vl gate <phase>` | 校验阶段准入，输出缺失清单 | 0(放行)/2(阻塞) |
+| `vl loop` | 扫描 failed 实验，校验/执行失败回流 | 0/2 |
+| `vl budget check` | 读 token_budget，超限报 HARD_BLOCK | 0/3(硬阻断) |
+| `vl lock <acquire\|release\|check> <artifact>` | 管理制品写锁（先到先得 + 超时失效） | 0/2(冲突) |
+| `vl bundle new <discipline> [--capability <cap>]` | 生成 L0 学科 Bundle 骨架 | 0/1 |
+| `vl bundle validate <bundle_dir>` | 校验 Bundle 结构合规 | 0/2 |
+| `vl finalize --path <ws>` | 收尾校验 + 生成 finalize_report.md（含 AI 贡献声明草稿） | 0(ready)/2(blocked) |
+| `vl sandbox <project_id>` | 生成/校验容器沙箱 compose | 0/2 |
+| `vl branch <create\|merge\|status>` | Git 假设分支协作流 | 0/2 |
+
+> 完整契约见 [`docs/interfaces.md`](docs/interfaces.md)。
 
 ### 前端
 
@@ -77,4 +94,5 @@ npm run dev                  # http://localhost:5173
 ## 状态
 
 - 当前阶段：**核心闭环已落地（Phase 0–4b）** —— 文件即状态门禁、失败驱动迭代、学科包化（biomed / materials / compsci 三学科均 L1）、容器沙箱、RAG 侧车、制品写锁、Git 协作流、`vl finalize` 收尾闭环。详见 [`TODO.md`](TODO.md) 与 [`CHANGELOG.md`](CHANGELOG.md)。
+- 下一步（Phase 4c，依赖 DSH 底座真实化）：三学科升 L2（Preset Patch + MCP + Golden 用例）+ 协作模型按真实痛点重评估。
 - 功能范围与成功指标见 [`docs/project-spec.md`](docs/project-spec.md)。

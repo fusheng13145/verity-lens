@@ -6,7 +6,7 @@
 
 | 术语 | 英文/缩写 | 含义 |
 |------|-----------|------|
-| 真理之眼 | VerityLens | 本项目名，科研全能 Agent 系统 |
+| 真理之眼 | verity-lens（VerityLens） | 本项目名；英文 slug 为 `verity-lens`，VerityLens 为同义品牌写法 |
 | 运行底座 | Harness / Base | 提供 agent loop、子代理、会话日志的运行时；当前实现为 DSH |
 | 适配层 | HAL | Harness Adapter Layer，唯一允许依赖底座的模块 |
 | 编排层 | Orchestrator Lite | 无状态事件处理器，负责门禁/失败回流/预算 |
