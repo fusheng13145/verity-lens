@@ -2,6 +2,21 @@
 
 > 遵循 Keep a Changelog 风格，版本号 `MAJOR.MINOR.PATCH`。
 
+## [1.13.0] - 2026-10-15 — Phase 4g（HPC 长任务提交工具）
+
+### Added
+- **`sidecar/tools/hpc_submit.py`**（蓝图 §2.7 / tool-calling.md 已列但此前未实现）：
+  - 三模式 `submit` / `status` / `cancel`；可插拔 backend：`dry_run`（默认）/ `mock` / `slurm` / `pbs`；
+  - `dry_run` / `mock` 确定性（job_id 由 命令+资源+backend 规格哈希确定）、**绝不实际执行**；`slurm`(`--wrap`) / `pbs`(`bash -c`) 把命令作单参数传入（避免 shell 注入），best-effort 调用并显式降级（scheduler 不可达 → `submission_unavailable`，不崩溃）；
+  - 所有提交完整落本地账本（command + resources）可审计，呼应 E13（长任务走 Sidecar 远程提交，规避终端关闭中断）。
+- 三学科注册 `verity-hpc-submit` MCP（biomed / materials / compsci；长任务提交是通用基础设施能力，与 stat_test/doi_verify 一致；materials 不注册 power_analysis/desensitize 的学科差异不变）。
+
+### Tests
+- `tests/sidecar/test_hpc_submit.py`：10 例（dry_run 确定性 / mock 生命周期 / 校验 / cancel / 未知 job_id / slurm 降级 / stdio 入口）。
+
+### Docs
+- 更新 `interfaces.md` / `tool-calling.md` / `bundle-registry.md` / `TODO` / `README`（`hpc_submit` 从"未实现"移除）。
+
 ## [1.12.0] - 2026-10-15 — Phase 4f（敏感数据脱敏工具 + E10 扫描守卫）
 
 ### Added

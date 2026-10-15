@@ -22,7 +22,7 @@ preset_patch:
     5. 主指标必须带 std 或 CI，禁止只报点估计；
     6. 基线对比须报告 baseline_delta 与显著性，禁止仅声称 SOTA。
     关键数值必须经 sidecar 确定性工具复算，不得自行产出。
-  tool_whitelist: ["stat_test", "doi_verify", "power_analysis", "desensitize"]
+  tool_whitelist: ["stat_test", "doi_verify", "power_analysis", "desensitize", "hpc_submit"]
 
 # L2：MCP 服务声明（sidecar 确定性工具，stdio 协议；入口见 sidecar/tools/_stdio.py）
 mcp:
@@ -47,6 +47,12 @@ mcp:
       command: ["python", "-m", "sidecar.tools.desensitize"]
       tools: ["desensitize"]
       description: "敏感数据脱敏（字段屏蔽/k-匿名/DP聚合）+ PHI 文本扫描守卫，E10 防护"
+
+    - name: "verity-hpc-submit"
+      transport: "stdio"
+      command: ["python", "-m", "sidecar.tools.hpc_submit"]
+      tools: ["hpc_submit"]
+      description: "长任务远程提交+状态轮询（dry_run/mock/slurm/pbs），规避终端关闭中断(E13)"
 
 # L2：Golden 用例（L1 验证脚本的输入/期望输出对，tests/golden/test_bundle_golden.py 回归）
 golden_cases:

@@ -6,9 +6,9 @@
 
 | Bundle | 级别 | 版本 | 状态 | Golden 用例 | 负责人 | 备注 |
 |--------|------|------|------|-------------|--------|------|
-| biomed | **L2** | 0.3.0 | ✅ 已交付（Phase 1–2 建 L1；Phase 4b 正式升 L1；Phase 4c 升 L2） | 3 例 | 待定 | stats + literature 两个 SKILL，含 L1 验证脚本；L2 补齐 preset_patch + MCP（stat_test/doi_verify/power_analysis/desensitize）+ Golden |
-| materials | **L2** | 0.2.0 | ✅ 已交付（Phase 4a 建 L1；Phase 4c 升 L2） | 3 例 | 待定 | characterization（不确定度 / n≥3 / 单位 / 仪器）+ literature；L2 补齐 preset_patch + MCP（stat_test/doi_verify）+ Golden |
-| compsci | **L2** | 0.2.0 | ✅ 已交付（Phase 4b 建 L1；Phase 4c 升 L2） | 3 例 | 待定 | computation（种子 / n≥3 / 环境 / 哈希 / 不确定度 / 基线差异）+ literature；L2 补齐 preset_patch + MCP（stat_test/doi_verify/power_analysis/desensitize，PHI 防护）+ Golden |
+| biomed | **L2** | 0.3.0 | ✅ 已交付（Phase 1–2 建 L1；Phase 4b 正式升 L1；Phase 4c 升 L2） | 3 例 | 待定 | stats + literature 两个 SKILL，含 L1 验证脚本；L2 补齐 preset_patch + MCP（stat_test/doi_verify/power_analysis/desensitize/hpc_submit）+ Golden |
+| materials | **L2** | 0.2.0 | ✅ 已交付（Phase 4a 建 L1；Phase 4c 升 L2） | 3 例 | 待定 | characterization（不确定度 / n≥3 / 单位 / 仪器）+ literature；L2 补齐 preset_patch + MCP（stat_test/doi_verify/hpc_submit，长任务提交）+ Golden |
+| compsci | **L2** | 0.2.0 | ✅ 已交付（Phase 4b 建 L1；Phase 4c 升 L2） | 3 例 | 待定 | computation（种子 / n≥3 / 环境 / 哈希 / 不确定度 / 基线差异）+ literature；L2 补齐 preset_patch + MCP（stat_test/doi_verify/power_analysis/desensitize/hpc_submit，PHI 防护 + 长任务提交）+ Golden |
 
 **L2 三要素**（缺一不可，`vl bundle validate` 强制，见 design-blueprint.md §2.6）：
 1. `preset_patch`：preset 名 + 由 SKILL.md 蒸馏的 system_prompt + tool_whitelist；

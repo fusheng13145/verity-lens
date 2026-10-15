@@ -20,7 +20,7 @@ preset_patch:
     3. 重复测量 n≥3，禁止用单次测量值代表批次性能；
     4. XRD 峰未扣除仪器宽化不得直接套用 Scherrer 公式。
     关键数值必须经 sidecar 确定性工具复算，不得自行产出。
-  tool_whitelist: ["stat_test", "doi_verify"]
+  tool_whitelist: ["stat_test", "doi_verify", "hpc_submit"]
 
 # L2：MCP 服务声明（sidecar 确定性工具，stdio 协议；入口见 sidecar/tools/_stdio.py）
 mcp:
@@ -35,6 +35,12 @@ mcp:
       command: ["python", "-m", "sidecar.tools.doi_verify"]
       tools: ["doi_verify"]
       description: "DOI 归一化 + Crossref 存在性校验，网络降级"
+
+    - name: "verity-hpc-submit"
+      transport: "stdio"
+      command: ["python", "-m", "sidecar.tools.hpc_submit"]
+      tools: ["hpc_submit"]
+      description: "长任务远程提交+状态轮询（dry_run/mock/slurm/pbs），规避终端关闭中断(E13)"
 
 # L2：Golden 用例（L1 验证脚本的输入/期望输出对，tests/golden/test_bundle_golden.py 回归）
 golden_cases:

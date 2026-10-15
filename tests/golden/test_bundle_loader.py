@@ -44,7 +44,7 @@ def test_load_with_full_capabilities(adapter, monkeypatch):
     assert report.degradations == []
     assert report.mcp_servers == [
         "verity-stat-test", "verity-doi-verify", "verity-power-analysis",
-        "verity-desensitize"
+        "verity-desensitize", "verity-hpc-submit"
     ]
     assert report.preset == "verity-research"
 
@@ -90,5 +90,6 @@ def test_load_manifest_parses_fields():
     assert data["level"] == "L2"
     assert data["preset_patch"]["preset"] == "verity-research"
     assert {s["name"] for s in data["mcp"]["servers"]} == {
-        "verity-stat-test", "verity-doi-verify"
-    }  # materials 不做假设检验/功效分析/敏感数据脱敏，不需要 power_analysis / desensitize
+        "verity-stat-test", "verity-doi-verify", "verity-hpc-submit"
+    }  # materials 不做假设检验/功效分析/敏感数据脱敏，不需要 power_analysis / desensitize；
+    # 但长任务远程提交（hpc_submit）是通用基础设施能力（E13），三学科均注册

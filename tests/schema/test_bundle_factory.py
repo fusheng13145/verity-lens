@@ -113,11 +113,13 @@ def test_three_disciplines_coexist():
     """Phase 4b→4c：biomed / materials / compsci 三学科并存、均达 L2、结构合规。"""
     # Phase 4e：biomed / compsci 需要功效分析（METH 归因硬证据），materials 不需要
     # Phase 4f：biomed / compsci 需要敏感数据脱敏（PHI 防护），materials 不需要
+    # Phase 4g：hpc_submit 是通用长任务提交能力（E13），三学科均注册
     stats_servers = {"verity-stat-test", "verity-doi-verify"}
-    desensitize_servers = stats_servers | {"verity-power-analysis", "verity-desensitize"}
+    hpc_server = {"verity-hpc-submit"}
+    desensitize_servers = stats_servers | {"verity-power-analysis", "verity-desensitize"} | hpc_server
     disciplines = {
         "biomed": ("L2", {"biomed-stats", "biomed-literature"}, desensitize_servers),
-        "materials": ("L2", {"materials-characterization", "materials-literature"}, stats_servers),
+        "materials": ("L2", {"materials-characterization", "materials-literature"}, stats_servers | hpc_server),
         "compsci": ("L2", {"compsci-computation", "compsci-literature"}, desensitize_servers),
     }
     seen_disciplines: set[str] = set()

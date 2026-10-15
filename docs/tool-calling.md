@@ -30,7 +30,7 @@
 | stat_test | 数据 + 检验类型 | p/effect_size/ci_95/test | 数值复算，禁止模型自算 |
 | power_analysis | mode(prior/post)/design/effect_size/α/n | required_n/power/underpowered | 失败归因复核（METH 功效不足须给复算证据） |
 | doi_verify | DOI | exists/metadata_match | 引用有效性 ≥95% |
-| hpc_submit | 命令+资源 | job_id/status_endpoint | 长任务远程提交+轮询（未实现） |
+| hpc_submit ✅ | mode(submit/status/cancel)+backend(dry_run/mock/slurm/pbs)+命令+资源 | job_id/state/status_endpoint | 长任务远程提交+轮询（E13）；dry_run/mock 确定性、不实际执行；slurm/pbs 显式降级 |
 | desensitize ✅ | mode(field_mask/k_anonymity/dp_aggregate/scan_text) + 参数 | 脱敏数据 / 命中列表 | k-匿名(PHID 抑制)/字段屏蔽/DP(ε=1.0)/PHI 文本扫描(E10 守卫) |
 
 ## 5. 安全约束

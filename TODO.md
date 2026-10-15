@@ -11,6 +11,7 @@
   - Phase 4d ✅ 2026-10-15：**HAL 契约对齐真实 DSH**（deepseek-ai/deepseek-harness 官方 CLI/mcp-client 键；本机实测 0.1.5-rc.2；版本特性门控 + 显式降级）
   - Phase 4e ✅ 2026-10-15：**科研正确性闭环**——power_analysis 工具落地 + verify_with_sidecar 真复算（p↔CI 自洽性 / 功效）+ L3 测试层从空目录变为 16 例
   - Phase 4f ✅ 2026-10-15：**敏感数据脱敏工具落地**——`desensitize`（field_mask / k_anonymity / dp_aggregate[ε=1.0] / scan_text[E10 守卫]）+ biomed/compsci 注册 verity-desensitize MCP
+  - Phase 4g ✅ 2026-10-15：**HPC 长任务提交工具落地**——`hpc_submit`（可插拔 backend：dry_run/mock/slurm/pbs；dry_run/mock 确定性、不实际执行，slurm/pbs 显式降级）+ 三学科注册 verity-hpc-submit MCP
 - **下一步**：底座 ≥0.2 升级后补事件流/session 接管联调 + patch schema 机读校验（`--dump-config-schema`）；协作模型按真实痛点重评估（不预设方案）
 
 ## Phase 4：扩展评估（按需）
@@ -49,6 +50,10 @@
   - [x] `sidecar/tools/desensitize.py`：field_mask（hash 令牌/redact/generalize）+ k_anonymity（QI 抑制至≥k）+ dp_aggregate（Laplace，ε=1.0，seed 可复现）+ scan_text（PHI/PII 正则扫描，E10 守卫）
   - [x] biomed / compsci 注册 `verity-desensitize` MCP（materials 不需要）；tool_whitelist 同步
   - [x] 测试：12 例（确定性断言 + stdio 入口），全量新增 18 例
+- [x] **Phase 4g** — HPC 长任务提交工具落地（2026-10-15）
+  - [x] `sidecar/tools/hpc_submit.py`：submit/status/cancel 三模式；backend 可插拔（dry_run 默认 / mock / slurm / pbs）
+  - [x] dry_run/mock 确定性（job_id 由规格哈希确定）、绝不实际执行；slurm/pbs best-effort 调用并显式降级（scheduler 不可达不崩溃）
+  - [x] 三学科注册 `verity-hpc-submit` MCP（通用长任务提交能力，E13 规避终端关闭中断；materials 不注册 power/desensitize 的学科差异不变）
 - [ ] 协作模型按真实痛点重评估（蓝图明确"不预设方案"，待 1–10 人团队实际协作反馈）
 
 ## Phase 3：健壮性与协作 ✅ 2026-10-15

@@ -107,7 +107,7 @@ class HarnessAdapter(Protocol):
 - `doi_verify`：输入 DOI → 输出 `{exists, metadata_match, error}`。✅
 - `desensitize`（✅ Phase 4f）：敏感数据脱敏 + PHI 扫描守卫，四种 mode：`field_mask`（hash 令牌/redact/generalize）、
   `k_anonymity`（QI 抑制至 ≥k）、`dp_aggregate`（Laplace，ε=1.0，seed 可复现）、`scan_text`（E10 prompt 守卫）。
-- `hpc_submit`（未实现）：输入命令+资源 → 输出 `{job_id, status_endpoint}`。
+- `hpc_submit`（✅ Phase 4g）：长任务远程提交 + 状态轮询 → 输出 `{job_id, state, status_endpoint}`；可插拔 backend（`dry_run` 默认 / `mock` / `slurm` / `pbs`），`dry_run`/`mock` 确定性、不实际执行，规避终端关闭中断（E13）；`slurm`/`pbs` best-effort 调用并显式降级。
 
 ## 4. MCP Server 契约
 
