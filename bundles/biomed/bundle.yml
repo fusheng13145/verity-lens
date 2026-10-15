@@ -20,7 +20,7 @@ preset_patch:
     3. 多重比较必须说明校正方法（Bonferroni / Benjamini-Hochberg FDR）；
     4. 禁止仅报告 p 值而不报告效应量，禁止用"显著"替代具体数值。
     关键数值（p 值 / 效应量 / CI）必须经 sidecar stat_test 工具复算，不得自行产出。
-  tool_whitelist: ["stat_test", "doi_verify", "power_analysis"]
+  tool_whitelist: ["stat_test", "doi_verify", "power_analysis", "desensitize"]
 
 # L2：MCP 服务声明（sidecar 确定性工具，stdio 协议；入口见 sidecar/tools/_stdio.py）
 mcp:
@@ -40,6 +40,11 @@ mcp:
       command: ["python", "-m", "sidecar.tools.power_analysis"]
       tools: ["power_analysis"]
       description: "功效分析（先验样本量 / 事后功效），METH 归因硬证据"
+    - name: "verity-desensitize"
+      transport: "stdio"
+      command: ["python", "-m", "sidecar.tools.desensitize"]
+      tools: ["desensitize"]
+      description: "敏感数据脱敏（字段屏蔽/k-匿名/DP聚合）+ PHI 文本扫描守卫，E10 防护"
 
 # L2：Golden 用例（L1 验证脚本的输入/期望输出对，tests/golden/test_bundle_golden.py 回归）
 golden_cases:

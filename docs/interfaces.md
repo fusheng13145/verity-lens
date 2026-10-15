@@ -105,6 +105,8 @@ class HarnessAdapter(Protocol):
 - `power_analysis`（✅ Phase 4e）：先验样本量 / 事后功效 → 输出 `{required_n, power, underpowered, post_hoc_warning}`；
   正态近似双侧口径（d=0.5 → 63/组；精确非中心 t 检验为 64，临界样本量建议用 G*Power 复核）。
 - `doi_verify`：输入 DOI → 输出 `{exists, metadata_match, error}`。✅
+- `desensitize`（✅ Phase 4f）：敏感数据脱敏 + PHI 扫描守卫，四种 mode：`field_mask`（hash 令牌/redact/generalize）、
+  `k_anonymity`（QI 抑制至 ≥k）、`dp_aggregate`（Laplace，ε=1.0，seed 可复现）、`scan_text`（E10 prompt 守卫）。
 - `hpc_submit`（未实现）：输入命令+资源 → 输出 `{job_id, status_endpoint}`。
 
 ## 4. MCP Server 契约

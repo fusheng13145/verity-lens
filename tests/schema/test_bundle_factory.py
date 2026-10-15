@@ -112,11 +112,13 @@ def test_materials_bundle_validates():
 def test_three_disciplines_coexist():
     """Phase 4b→4c：biomed / materials / compsci 三学科并存、均达 L2、结构合规。"""
     # Phase 4e：biomed / compsci 需要功效分析（METH 归因硬证据），materials 不需要
+    # Phase 4f：biomed / compsci 需要敏感数据脱敏（PHI 防护），materials 不需要
     stats_servers = {"verity-stat-test", "verity-doi-verify"}
+    desensitize_servers = stats_servers | {"verity-power-analysis", "verity-desensitize"}
     disciplines = {
-        "biomed": ("L2", {"biomed-stats", "biomed-literature"}, stats_servers | {"verity-power-analysis"}),
+        "biomed": ("L2", {"biomed-stats", "biomed-literature"}, desensitize_servers),
         "materials": ("L2", {"materials-characterization", "materials-literature"}, stats_servers),
-        "compsci": ("L2", {"compsci-computation", "compsci-literature"}, stats_servers | {"verity-power-analysis"}),
+        "compsci": ("L2", {"compsci-computation", "compsci-literature"}, desensitize_servers),
     }
     seen_disciplines: set[str] = set()
     for name, (level, skills, servers) in disciplines.items():

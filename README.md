@@ -94,6 +94,6 @@ npm run dev                  # http://localhost:5173
 
 ## 状态
 
-- 当前阶段：**核心闭环已落地（Phase 0–4e）** —— 文件即状态门禁、失败驱动迭代、学科包化（biomed / materials / compsci 三学科均 **L2**：Preset Patch + MCP 声明 + Golden 用例，`vl bundle load` 一键加载）、容器沙箱、RAG 侧车、制品写锁、Git 协作流、`vl finalize` 收尾闭环；HAL 契约已对齐真实底座 [deepseek-harness](https://github.com/deepseek-ai/deepseek-harness)（本机实测 0.1.5-rc.2）；科研正确性闭环已落地（`power_analysis` + 关键数值确定性复算 + L3 抽检）。详见 [`TODO.md`](TODO.md) 与 [`CHANGELOG.md`](CHANGELOG.md)。
+- 当前阶段：**核心闭环已落地（Phase 0–4f）** —— 文件即状态门禁、失败驱动迭代、学科包化（biomed / materials / compsci 三学科均 **L2**：Preset Patch + MCP 声明 + Golden 用例，`vl bundle load` 一键加载）、容器沙箱、RAG 侧车、制品写锁、Git 协作流、`vl finalize` 收尾闭环；HAL 契约已对齐真实底座 [deepseek-harness](https://github.com/deepseek-ai/deepseek-harness)（本机实测 0.1.5-rc.2）；科研正确性闭环已落地（`power_analysis` + 关键数值确定性复算 + L3 抽检）；敏感数据脱敏工具 `desensitize`（k-匿名 / PHI 屏蔽 / DP 聚合 ε=1.0 / PHI 文本扫描守卫）已落地。详见 [`TODO.md`](TODO.md) 与 [`CHANGELOG.md`](CHANGELOG.md)。
 - 下一步：底座升级至 ≥0.2 后的 NDJSON 事件流 / session 接管 / patch schema 联调 + 协作模型按真实痛点重评估。
 - 功能范围与成功指标见 [`docs/project-spec.md`](docs/project-spec.md)。

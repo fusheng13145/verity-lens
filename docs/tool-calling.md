@@ -31,7 +31,7 @@
 | power_analysis | mode(prior/post)/design/effect_size/α/n | required_n/power/underpowered | 失败归因复核（METH 功效不足须给复算证据） |
 | doi_verify | DOI | exists/metadata_match | 引用有效性 ≥95% |
 | hpc_submit | 命令+资源 | job_id/status_endpoint | 长任务远程提交+轮询（未实现） |
-| desensitize | 原始数据 | 脱敏数据 | k-匿名/PHI/DP(ε=1.0) |
+| desensitize ✅ | mode(field_mask/k_anonymity/dp_aggregate/scan_text) + 参数 | 脱敏数据 / 命中列表 | k-匿名(PHID 抑制)/字段屏蔽/DP(ε=1.0)/PHI 文本扫描(E10 守卫) |
 
 ## 5. 安全约束
 

@@ -10,6 +10,7 @@
   - Phase 4c ✅ 2026-10-15：三学科升 L2（preset_patch + MCP 声明 + Golden 用例）+ `vl bundle load` 加载器 + numpy/scipy 补装
   - Phase 4d ✅ 2026-10-15：**HAL 契约对齐真实 DSH**（deepseek-ai/deepseek-harness 官方 CLI/mcp-client 键；本机实测 0.1.5-rc.2；版本特性门控 + 显式降级）
   - Phase 4e ✅ 2026-10-15：**科研正确性闭环**——power_analysis 工具落地 + verify_with_sidecar 真复算（p↔CI 自洽性 / 功效）+ L3 测试层从空目录变为 16 例
+  - Phase 4f ✅ 2026-10-15：**敏感数据脱敏工具落地**——`desensitize`（field_mask / k_anonymity / dp_aggregate[ε=1.0] / scan_text[E10 守卫]）+ biomed/compsci 注册 verity-desensitize MCP
 - **下一步**：底座 ≥0.2 升级后补事件流/session 接管联调 + patch schema 机读校验（`--dump-config-schema`）；协作模型按真实痛点重评估（不预设方案）
 
 ## Phase 4：扩展评估（按需）
@@ -44,6 +45,10 @@
   - [x] L3 层落地：`tests/correctness/` 由空目录变为 16 例真实抽检（含与 scipy 独立 API 对齐）
   - [x] 修正 biomed 金样例的统计不自洽（p=0.023 与 CI[0.31,0.93] 蕴含 p≈9e-5，被 L3 交叉复算查出）
   - [x] biomed / compsci 注册 `verity-power-analysis` MCP 服务
+- [x] **Phase 4f** — 敏感数据脱敏工具落地（2026-10-15）
+  - [x] `sidecar/tools/desensitize.py`：field_mask（hash 令牌/redact/generalize）+ k_anonymity（QI 抑制至≥k）+ dp_aggregate（Laplace，ε=1.0，seed 可复现）+ scan_text（PHI/PII 正则扫描，E10 守卫）
+  - [x] biomed / compsci 注册 `verity-desensitize` MCP（materials 不需要）；tool_whitelist 同步
+  - [x] 测试：12 例（确定性断言 + stdio 入口），全量新增 18 例
 - [ ] 协作模型按真实痛点重评估（蓝图明确"不预设方案"，待 1–10 人团队实际协作反馈）
 
 ## Phase 3：健壮性与协作 ✅ 2026-10-15

@@ -2,6 +2,21 @@
 
 > 遵循 Keep a Changelog 风格，版本号 `MAJOR.MINOR.PATCH`。
 
+## [1.12.0] - 2026-10-15 — Phase 4f（敏感数据脱敏工具 + E10 扫描守卫）
+
+### Added
+- **`sidecar/tools/desensitize.py`**（蓝图 §2.7 承诺、tool-calling.md 已列但此前未实现）：
+  - `field_mask`：字段级屏蔽（hash 令牌化 / redact 置空 / generalize 数值泛化），hash 带盐且确定性；
+  - `k_anonymity`：准标识符（QI）抑制，使每个 QI 组合出现 ≥ k 次（唯一组合标记抑制，非 QI 字段保留以审计）；
+  - `dp_aggregate`：差分隐私聚合（Laplace，默认 ε=1.0，敏感度按统计量定），`seed` 给定则噪声可复现；
+  - `scan_text`：**E10 风险守卫**——正则扫描文本中的 PHI/PII（email / 手机号 / 身份证 / 银行卡 / 生日），返回命中类型与风险等级（high/medium/none）。
+  - 带 `TOOL_SPEC` + stdio 入口（`python -m sidecar.tools.desensitize`），非法输入显式报错（退出码 1）。
+- **MCP 注册**：biomed / compsci 增加 `verity-desensitize` 服务并纳入 `tool_whitelist`（materials 不处理个人敏感数据，无需）。
+- 测试：新增 `tests/sidecar/test_desensitize.py` 12 例（确定性断言 + stdio 入口），覆盖四种 mode 与错误路径。
+
+### Changed
+- 文档同步：`interfaces.md`（关键工具清单标注 ✅ Phase 4f）、`tool-calling.md`（desensitize 行标注已落地 + mode）、`bundle-registry.md`（biomed/compsci MCP 集更新）；`modules.md` 早先的 `budget.py` 漂移已在 4e 修正。
+
 ## [1.11.0] - 2026-10-15 — Phase 4e（科研正确性闭环：功效工具 + 真实复算 + L3 落地）
 
 ### Added
