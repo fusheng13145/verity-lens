@@ -30,3 +30,6 @@ docker/sandbox-compose.*.yml
 # ── OS ──
 .DS_Store
 Thumbs.db
+
+# HAL 物化的 Preset Patch 叠加层（运行时产物）
+hal/patches/

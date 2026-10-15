@@ -38,6 +38,28 @@ class HarnessAdapter(Protocol):
 - 任何特性为 false 时，调用方 MUST 走降级路径，不得抛未捕获异常。
 - 接口变更须同步 `hal/contract_tests/` 并升版。
 
+### 1.1 DSH 实现映射（hal/dsh_adapter.py）
+
+底座 = [deepseek-ai/deepseek-harness](https://github.com/deepseek-ai/deepseek-harness)（MIT，developer preview）。
+契约基线取自官方 `docs/cli-help.md` / `docs/config-catalog.md` / `docs/capability-seams.md`；
+本机实测版本见 `hal/version_lock.yml`。
+
+| HAL 接口 | DSH 真实表面 | 版本要求 |
+|----------|---------------|----------|
+| `start_session` | `dsh --profile headless [--patch <p>] [--json] [--session-id <id>] "<task>"` | `--json` / `--session-id` ≥0.2 |
+| `export_session_log` | 解析 `headless --json` 的 NDJSON 事件流 | ≥0.2（更低版本退化为最终消息） |
+| `resume_session` | `dsh --profile headless --session-id <id>` 接管已持久化 Session | ≥0.2 |
+| `fork_trajectory` | launcher 无此命令 → **恒定降级**为 `replay_to`（会话内前缀分叉属 `ctx.subagents`，HAL 不穿透） | — |
+| `register_skills` | 发现 `skills/**/SKILL.md`；注入由 `ctx.skills` / skill-filesystem 在会话目录内完成 | — |
+| `declare_mcp_servers` | `@deepseek-ai/dsh-mcp-client` `StdioConfig`：`transport/serverName/command/args/env/cwd/toolCallTimeoutMs/failOnStartupError`；工具名 `mcp__<serverName>__<rawName>` | — |
+| `apply_preset_patch` | 物化为 patch-list 叠加层文件 → `--patch <path>`（可重复） | ≥0.1 |
+| `spawn_subagent` | 会话内 `ctx.subagents` / tool-subagent 委派；launcher 不代跑，HAL 仅登记 | — |
+| `set_permission` | 语义对齐 `ctx.sandboxPolicy`（`read-only` / `workspace-write`） | — |
+| `capabilities()` | 版本锁结论 ∩ 运行期版本特性探测（`VERSION_FEATURE_MIN`） | — |
+
+降级口径：底座不在 PATH → 全 False + `degraded:harness_unavailable`；版本过低 → 丢弃未知 flag +
+`degraded:unsupported_flag`；MCP/patch 能力不可用 → `vl bundle load` 打印 `[DEGRADED]`。
+
 ## 2. CLI 命令契约（`vl`）
 
 | 命令 | 参数 | 行为 | 退出码 |

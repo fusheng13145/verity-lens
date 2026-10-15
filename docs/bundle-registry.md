@@ -12,7 +12,8 @@
 
 **L2 三要素**（缺一不可，`vl bundle validate` 强制，见 design-blueprint.md §2.6）：
 1. `preset_patch`：preset 名 + 由 SKILL.md 蒸馏的 system_prompt + tool_whitelist；
-2. `mcp.servers`：sidecar 确定性工具声明（stdio：`python -m sidecar.tools.<tool>`）；
+   加载时物化为 DSH patch-list 叠加层文件（`hal/patches/<discipline>-<preset>.yml`，运行时产物，不入库），经 `--patch <path>` 生效；
+2. `mcp.servers`：sidecar 确定性工具声明（Bundle 人读格式）→ 由 `bundle_loader.to_dsh_mcp_config` 映射为 DSH mcp-client `StdioConfig`（`serverName` 须匹配 `[A-Za-z0-9_-]{1,32}`；`command` 字符串 + `args` 数组）；模型可见工具名 `mcp__<serverName>__<rawName>`；
 3. `golden_cases`：L1 验证脚本的输入/期望输出对（`golden/<case>.input.json` + `.expected.json`），由 `tests/golden/test_bundle_golden.py` 回归，实际问题列表必须与期望逐字一致（防验证脚本"悄悄放水"）。
 
 **biomed**：`bundle.yml` + `skills/biomed-stats/SKILL.md`（效应量 + 95% CI + p 值强制规范）+ `skills/biomed-literature/SKILL.md`（证据等级 + 诊断效能指标）+ `skills/biomed-stats/scripts/validate_report.py` + `references/biomed_terminology.json` + `golden/`（3 例）。

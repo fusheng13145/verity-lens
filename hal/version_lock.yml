@@ -1,10 +1,29 @@
 # HAL 版本锁（Capability Lock）
-# 记录已验证的运行底座版本与能力集。底座升级须修改本文件并过 hal_contract 测试。
-verified_version: "2.4.0"
+# 记录"针对该底座版本验证过的能力"，底座升级须修改本文件并过 `make hal-contract-test`。
+#
+# 证据来源（deepseek-ai/deepseek-harness，MIT，developer preview）：
+#   docs/cli-help.md          launcher / profile / --patch / headless --json / --session-id
+#   docs/capability-seams.md  ctx.skills / ctx.subagents / ctx.mcpResources / ctx.sessionPersistence
+#   docs/config-catalog.md    mcp-client StdioConfig（serverName / command / args …）
+# 本机实测（2026-10-15，npm 安装）：
+#   dsh --version                  → 0.1.5-rc.2
+#   dsh --help                     → 有 --profile / --patch / --dump-config / --from-default-profile
+#   dsh --profile headless --help  → 仅裸 task 参数，无 --json / --session-id
+#   dsh --dump-config-schema       → unknown option（0.2.x 才引入）
+source: "https://github.com/deepseek-ai/deepseek-harness"
+verified_version: "0.1.5-rc.2"        # 本机实测通过的版本
+contract_baseline: "0.2.1-alpha.3"    # 官方 master 契约基线（CLI 文档来源）
+verified_at: "2026-10-15"
 capabilities:
-  trajectory_fork: true
-  preset_patch: true
-  subagent: true
-  mcp: true
-  session_log_export: true
-known_differences: []
+  # launcher CLI 未暴露轨迹分叉命令；会话内"已完成前缀分叉"走 ctx.subagents 的
+  # forkProvider / subagent-fork-in-process，属会话内委派，HAL 不穿透 → 恒定降级为 replay
+  trajectory_fork: false
+  preset_patch: true        # --patch <path>（0.1.5-rc.2 实测存在）
+  subagent: true            # ctx.subagents + tool-subagent + agent-team（会话内委派）
+  mcp: true                 # @deepseek-ai/dsh-mcp-client StdioConfig
+  session_log_export: true  # headless --json（NDJSON）；需底座 ≥0.2，运行期收窄
+known_differences:
+  - "DSH 处于 developer preview，官方明示会有破坏性变更；每次升级须重跑 hal-contract-test"
+  - "本机 0.1.5-rc.2 缺 --json / --session-id / --dump-config-schema（0.2.x 才引入）：事件流与 session 接管自动降级为最终消息流，patch 字段 schema 无法机读校验"
+  - "patch 文件内部 schema 官方文档未公开；verity-lens 的 preset_patch 以 --patch 传入，字段合法性需底座 ≥0.2 时用 --dump-config-schema 复核"
+  - "capabilities = 版本锁结论 ∩ 运行期版本特性探测（运行期只收窄不放宽）"

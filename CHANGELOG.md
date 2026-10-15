@@ -2,6 +2,52 @@
 
 > 遵循 Keep a Changelog 风格，版本号 `MAJOR.MINOR.PATCH`。
 
+## [1.10.0] - 2026-10-15 — Phase 4d（HAL 契约对齐真实 DSH）
+
+### Fixed
+- **HAL 的 DSH 契约此前是虚构的**：版本锁写 `verified_version: 2.4.0`、能力全开、
+  命令行形状（`dsh` 裸命令）从未与真实底座核对。现按官方仓库
+  [deepseek-ai/deepseek-harness](https://github.com/deepseek-ai/deepseek-harness)
+  （MIT，developer preview）的 `docs/cli-help.md` / `config-catalog.md` / `capability-seams.md`
+  全面重写，`verified_version` 更正为本机实测 **0.1.5-rc.2**，并登记
+  `contract_baseline: 0.2.1-alpha.3` 与来源 URL。
+- **`trajectory_fork` 由 true 更正为 false**：launcher CLI 未暴露轨迹分叉命令；
+  DSH 会话内的"已完成前缀分叉"属 `ctx.subagents` 的 forkProvider（tool-subagent 委派），
+  HAL 不穿透 → 恒定降级为 `replay_to`（此前是乐观假设）。
+- **Windows 无法启动底座**：`subprocess` 传裸名 `dsh`（npm 装的是无扩展名 sh 脚本）→ WinError 2。
+  改为经 `shutil.which` 解析真实 `.cmd` shim 后再启动，并对非 UTF-8（本机 GBK 代码页）输出容错解码。
+- **Preset Patch 同名覆盖**：三学科共用 `verity-research` 时叠加层文件互相覆盖；
+  现按 `<discipline>-<preset>` 隔离，且 `hal/patches/` 加入 .gitignore（运行时产物）。
+
+### Added
+- **真实 DSH 命令行契约**（`build_run_argv` / 契约测试锁定）：
+  `dsh --profile <p> [--patch <f>]… [--json] [--session-id <id>] "<task>"`；
+  出厂 profile web/headless/sdk/sdk-minimal/acp；支持命令前缀调用
+  （等价 `npx @deepseek-ai/dsh`）。
+- **版本特性门控** `VERSION_FEATURE_MIN`：按 `dsh --version` 判定，
+  `--json` / `--session-id` / `--dump-config-schema` 属 0.2.x；底座版本更低时
+  **不发出未知选项**（否则底座直接报 unknown option），改写 `degraded:unsupported_flag` 事件。
+  `capabilities()` = 版本锁结论 ∩ 运行期特性探测（运行期只收窄不放宽）。
+- **MCP 声明映射到真实 `StdioConfig`**：`serverName`（`[A-Za-z0-9_-]{1,32}`）/ `command`+`args` /
+  `toolCallTimeoutMs` / `failOnStartupError`；模型可见工具名 `mcp__<serverName>__<rawName>`
+  （`vl bundle load` 现在会打印这些名字）。
+- `load_version_lock()` + `parse_version()` + `DSHAdapter.features()` / `resolved_bin()`。
+
+### Docs
+- `docs/deployment-ops.md`：DSH 安装（Node 前置 / npx 入口 / 全局安装）、真实 CLI 表面、
+  能力矩阵与降级行为表、Session 续跑按版本区分。
+- `docs/interfaces.md` 新增 §1.1「DSH 实现映射」：HAL 接口 ↔ DSH 真实表面 ↔ 版本要求。
+- `docs/bundle-registry.md`：L2 的 preset_patch 物化路径与 MCP 映射说明。
+
+### Tests
+- `hal/contract_tests/test_adapter_contract.py` 重写：假 dsh 桩锁定真实命令行形状、
+  0.1/0.2 版本特性门控、NDJSON 事件流解析、底座缺失/版本过低降级、
+  `StdioConfig` 校验、Preset Patch 物化与 scope 隔离；含真实 dsh 存在时的实测用例。
+- 全量 **149 个用例**通过（原 125 + 新增 24）。
+
+> 注：底座 ≥0.2 的 NDJSON 事件流 / `--session-id` 接管 / patch schema 机读校验
+> （`--dump-config-schema`）待本机底座升级后联调；当前 0.1.5-rc.2 下这些能力按契约自动降级。
+
 ## [1.9.0] - 2026-10-15 — Phase 4c（三学科升 L2 + Bundle 加载器）
 
 ### Added

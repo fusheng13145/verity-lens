@@ -302,8 +302,11 @@ def cmd_bundle(args) -> int:
         print(f"[bundle] Skill 注册: {len(report.skills)} 个")
         if report.mcp_servers:
             print(f"[bundle] MCP 声明: {', '.join(report.mcp_servers)}")
+        if report.model_tools:
+            print(f"[bundle] 模型可见工具: {', '.join(report.model_tools)}")
         if report.preset:
-            print(f"[bundle] Preset 补丁: {report.preset}")
+            print(f"[bundle] Preset 补丁: {report.preset}"
+                  + (f" → {report.patch_path}" if report.patch_path else ""))
         for msg in report.degradations:
             print(f"[DEGRADED] {msg}")
         return EXIT_OK

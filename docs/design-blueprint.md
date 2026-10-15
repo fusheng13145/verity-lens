@@ -170,19 +170,26 @@ class HarnessAdapter(Protocol):
 #### 2.1.3 能力探测与版本锁
 
 ```yaml
-# hal/version_lock.yml
-verified_version: "2.4.0"
+# hal/version_lock.yml（2026-10-15 实测后的真实值，详见该文件注释）
+source: "https://github.com/deepseek-ai/deepseek-harness"
+verified_version: "0.1.5-rc.2"        # 本机实测
+contract_baseline: "0.2.1-alpha.3"    # 官方 master CLI 契约基线
 capabilities:
-  trajectory_fork: true
-  preset_patch: true
-  subagent: true
-  mcp: true
-  session_log_export: true
-known_differences: []
-# 升级流程：改 version_lock.yml → CI 跑 hal_contract 测试 → 通过则更新；失败则 HAL 修复
+  trajectory_fork: false      # launcher CLI 无此命令 → 恒定降级为 replay
+  preset_patch: true          # --patch <path>（≥0.1）
+  subagent: true              # ctx.subagents 会话内委派
+  mcp: true                   # mcp-client StdioConfig
+  session_log_export: true    # headless --json（≥0.2，运行期按版本收窄）
+# capabilities = 版本锁结论 ∩ 运行期版本特性探测（只收窄不放宽）
+# 升级流程：改 version_lock.yml → make hal-contract-test → 通过则更新；失败则 HAL 修复
 ```
 
 **工程纪律**：`hal/` 单测覆盖率 100%；每次底座版本升级先跑 `make hal-contract-test`，再跑 Golden 回归；每季度做一次"切换演练"评估备选底座接入成本。
+
+**底座现状（2026-10-15）**：DSH 为 developer preview（官方明示会有破坏性变更）。
+实测 0.1.5-rc.2 的 `headless` 仅有裸 task 参数，无 `--json` / `--session-id`，
+launcher 亦无 `--dump-config-schema`（三者均为 0.2.x 引入）→ HAL 按版本门控，
+丢弃不支持的 flag 并写 `degraded` 事件。HAL↔DSH 映射见 `interfaces.md §1.1`。
 
 ### 2.2 Orchestrator Lite：轻量编排内核
 
@@ -461,7 +468,7 @@ model_tier:
 
 执行策略：全局月度/项目总预算≥100% → **HARD_BLOCK**；阶段预算≥100% → HARD_BLOCK，≥70% → SOFT_WARNING；单轮估算超限 → **AUTO_DOWNGRADE**（pro→flash、RAG citation-only、关闭非必要子代理）。批量任务分片（normal batch_size=10/interval=60s，high=3/120s），每批执行前查预算，硬阻断时暂停队列等人工介入。
 
-硬阻断恢复：编排层暂停当前阶段所有会话 → 导出 Session Log → 通知研究者（预算使用率/已完成产物/恢复选项）→ 研究者选 A 追加预算(+20%) / B 切廉价模型 / C 手动接管 → `dsh resume` 从断点继续。
+硬阻断恢复：编排层暂停当前阶段所有会话 → 导出 Session Log → 通知研究者（预算使用率/已完成产物/恢复选项）→ 研究者选 A 追加预算(+20%) / B 切廉价模型 / C 手动接管 → 底座 ≥0.2 用 `dsh --profile headless --session-id <id>` 从断点继续（<0.2 无 session 接管，只能重跑任务）。
 
 #### 2.8.2 沙箱安全
 

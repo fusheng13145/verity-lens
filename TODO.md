@@ -7,8 +7,9 @@
 - **当前阶段**：Phase 4 进行中（扩展评估）
   - Phase 4a ✅ 2026-10-15：materials 学科包（L0→L1）+ `vl finalize` 真实收尾闭环 + 实验可复现元数据
   - Phase 4b ✅ 2026-10-15：compsci 第三学科（L0→L1）+ biomed 正式升 L1 + README 命名统一为 verity-lens
-  - Phase 4c 🟡 2026-10-15：三学科升 L2（preset_patch + MCP 声明 + Golden 用例）+ `vl bundle load` 加载器 + numpy/scipy 补装；**待真实 DSH 联调**（dsh 二进制接入后的端到端"换 Bundle 即切换学科"演练 + L2 轨迹回归 edit distance 口径）
-- **下一步**：DSH 底座真实化后的联调验证 + 协作模型按真实痛点重评估（不预设方案）
+  - Phase 4c ✅ 2026-10-15：三学科升 L2（preset_patch + MCP 声明 + Golden 用例）+ `vl bundle load` 加载器 + numpy/scipy 补装
+  - Phase 4d ✅ 2026-10-15：**HAL 契约对齐真实 DSH**（deepseek-ai/deepseek-harness 官方 CLI/mcp-client 键；本机实测 0.1.5-rc.2；版本特性门控 + 显式降级）
+- **下一步**：底座 ≥0.2 升级后补事件流/session 接管联调 + patch schema 机读校验（`--dump-config-schema`）；协作模型按真实痛点重评估（不预设方案）
 
 ## Phase 4：扩展评估（按需）
 
@@ -22,13 +23,20 @@
   - [x] biomed 正式升 L1（`bundle.yml` level 字段同步；L1 校验脚本与 literature 早已具备）
   - [x] README 项目名统一为 kebab-case `verity-lens（真理之眼）`，与包名/目录一致
   - [x] 测试：101 个用例通过（新增第三学科共存校验 1）
-- [ ] **Phase 4c**（部分完成 2026-10-15；联调待 DSH 底座真实化）
+- [x] **Phase 4c**（2026-10-15 完成）
   - [x] biomed / materials / compsci 升 L2：补 Preset Patch + MCP 声明 + Golden 用例（每学科 3 例，`vl bundle validate` 强制三要素）
   - [x] Bundle 加载器 `orchestrator/bundle_loader.py` + `vl bundle load`：bundle.yml → HAL 注册 Skill/MCP/Preset，能力缺失显式降级（不静默）
   - [x] sidecar 工具 stdio 入口（`python -m sidecar.tools.<tool>`，stdin/stdout JSON）：MCP 声明可执行，非纸面配置
   - [x] numpy 2.5.4 / scipy 1.18.1 补装（Phase 0 遗留）：stat_test 真实统计路径生效
-  - [ ] DSH 真实化联调：dsh 二进制接入后端到端"换 Bundle 即切换学科"演练 + L2 轨迹回归（edit distance ≤2）
-  - [ ] 协作模型按真实痛点重评估（蓝图明确"不预设方案"，待 1–10 人团队实际协作反馈）
+- [x] **Phase 4d** — HAL 契约对齐真实 DSH（2026-10-15）
+  - [x] 依据官方 deepseek-ai/deepseek-harness 文档重写 `hal/dsh_adapter.py`：profile / `--patch` / `headless --json` / `--session-id` 真实命令行
+  - [x] 版本锁去虚构化：`verified_version` 由编造的 2.4.0 更正为本机实测 0.1.5-rc.2，并记录 `contract_baseline` 0.2.1-alpha.3 与来源 URL
+  - [x] 版本特性门控 `VERSION_FEATURE_MIN`：`--json`/`--session-id`/`--dump-config-schema` 属 0.2.x，底版本自动丢弃并写 `degraded` 事件
+  - [x] MCP 声明映射到 mcp-client 真实 `StdioConfig`（serverName 正则 / command+args / 工具名 `mcp__<server>__<raw>`）
+  - [x] Windows 兼容：`shutil.which` 解析 npm `.cmd` shim + 非 UTF-8 输出容错解码
+  - [x] HAL 契约测试重写为真实命令行形状 + 版本降级（39 例），并含真实 dsh 实测用例
+  - [ ] 底座升级至 ≥0.2 后：NDJSON 事件流 / session 接管联调 + patch schema 机读校验（`--dump-config-schema`）
+- [ ] 协作模型按真实痛点重评估（蓝图明确"不预设方案"，待 1–10 人团队实际协作反馈）
 
 ## Phase 3：健壮性与协作 ✅ 2026-10-15
 
