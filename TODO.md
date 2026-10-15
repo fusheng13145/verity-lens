@@ -54,6 +54,7 @@
   - [x] `sidecar/tools/hpc_submit.py`：submit/status/cancel 三模式；backend 可插拔（dry_run 默认 / mock / slurm / pbs）
   - [x] dry_run/mock 确定性（job_id 由规格哈希确定）、绝不实际执行；slurm/pbs best-effort 调用并显式降级（scheduler 不可达不崩溃）
   - [x] 三学科注册 `verity-hpc-submit` MCP（通用长任务提交能力，E13 规避终端关闭中断；materials 不注册 power/desensitize 的学科差异不变）
+- [x] **L4 边界保真集成测试**（2026-10-15，v1.13.1）——`tests/integration/test_stdio_boundary.py`：证明 Sidecar 工具经 `python -m`（HAL/MCP 真实路径）与进程内 `run(**params)`（编排层内部路径）产出逐字段等价；`make integration` 单独跑
 - [ ] 协作模型按真实痛点重评估（蓝图明确"不预设方案"，待 1–10 人团队实际协作反馈）
 
 ## Phase 3：健壮性与协作 ✅ 2026-10-15

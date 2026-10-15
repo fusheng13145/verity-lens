@@ -2,6 +2,17 @@
 
 > 遵循 Keep a Changelog 风格，版本号 `MAJOR.MINOR.PATCH`。
 
+## [1.13.1] - 2026-10-15 — L4：Sidecar 双通道边界保真集成测试
+
+### Added
+- `tests/integration/test_stdio_boundary.py`（9 例）：把每个 Sidecar 工具当作 HAL 那样用
+  `python -m sidecar.tools.<x>` 子进程拉起，喂相同输入，断言 stdio 输出与编排层
+  `run(**params)` 逐字段等价（数值容差 abs=1e-9 / rel=1e-6，规避跨进程 BLAS 浮点归并差异）。
+  - 覆盖 stat_test / power_analysis(prior+post) / desensitize(field_mask+k_anonymity+dp_aggregate+scan_text) / hpc_submit(dry_run 等价 + mock 生命周期 pending→running→completed)。
+  - 收敛项目立身之本："关键数值必经确定性工具"在 import 通道与 stdio/MCP 通道下产出一致。
+- `Makefile` 新增 `integration:` 目标（`make integration` 单独跑 L4 边界测试），与 schema/golden/correctness/hal-contract 分层命名一致。
+- 全量测试 201 例（原 192 + 新增 9）。
+
 ## [1.13.0] - 2026-10-15 — Phase 4g（HPC 长任务提交工具）
 
 ### Added

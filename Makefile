@@ -7,7 +7,7 @@ VENV_PY := $(VENV)/Scripts/python.exe   # Windows；Linux/macOS 请用 $(VENV)/b
 WEB     := web
 
 .PHONY: help venv install schema-check golden hal-contract-test correctness \
-        test api web reproduce clean
+        integration test api web reproduce clean
 
 help:            ## 显示帮助
 	@grep -E '^[a-zA-Z_-]+:.*?##' $(MAKEFILE_LIST) \
@@ -31,6 +31,9 @@ hal-contract-test: ## L4：HAL 契约测试（底座升级必跑）
 
 correctness:     ## L3：科研正确性抽检
 	$(VENV_PY) -m pytest tests/correctness -q
+
+integration:     ## L4：Sidecar 工具 stdio 边界 ↔ 进程内模块 输出保真
+	$(VENV_PY) -m pytest tests/integration -q
 
 test:            ## 运行全部测试
 	$(VENV_PY) -m pytest -q
