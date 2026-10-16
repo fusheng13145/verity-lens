@@ -18,7 +18,7 @@
   - Phase 4k ✅ 2026-10-16：**preset patch 机读校验 + DSH schema 钉固**（Backlog C）——`orchestrator/patch_schema.py`（`validate_preset_patch` 按 JSON Schema 严格校验 preset_patch 声明 + `pin_dsh_schema` 把真实 DSH 配置 schema 钉到 `.verity/dsh-config-schema.json` 作契约参考；实测 0.2.0-rc.2 schema 为 Cordis 风格 root array，故校验针对 verity 契约而非 DSH schema）+ `DSHAdapter.dump_config_schema()`（0.2.x 特性门控）+ `vl bundle load --check-patch-schema`（默认关闭，可选增强）+ `docs/bundle-registry.md` §3 说明；全量 247 通过。诚实边界：verity preset_patch 尚未映射为 DSH 真正的 Cordis 叠加层（patch 文件格式官方未公开）
   - Phase 4l ✅ 2026-10-16：**RAG 侧车接入编排 CLI + 写入埋点激活**（Backlog C ①）——`vl rag index/query`（`cmd_rag`：目录/文件分片索引 + 检索，`--glob`/`--top-k`/`--min-score`/`--reset`/`--json`/`--force-citation-only`）+ 索引持久化（`literature_rag.save_index/load_index` 落盘 `.verity/rag-index.json`，跨进程共享，按 chunk_id 去重防重复索引膨胀）+ `rag_write_observer` 接线（opt-in 开启即记 `rag_index_write`，关闭零副作用）+ 离线阈值修正（`OFFLINE_SCORE_THRESHOLD=0.05`：hash 嵌入器相似度量级 0.5~0.85 低于真实稠密嵌入的蓝图阈值 0.72，`--min-score` 可显式覆盖）；实测索引 docs/ 18 文件 → 92 分片、检索正确命中 collab.md 相关分片；全量 260 通过
   - Phase 4m ✅ 2026-10-16：**季度切换演练自动化**（Backlog C ②）——`hal/switch_drill.py`（接口符合性 12 方法签名级核验 / 耦合扫描 2/6 行项预算 / 替换模拟 MinimalAdapter 证明接口可实现 / 版本漂移检测 / 可选契约回归）+ `scripts/base-switch-drill.py` CLI（`--skip-contract-tests`/`--budget`/`--json`）+ Makefile `base-switch-drill`；**首跑即抓到真实问题**：本机旧全局 dsh（D:/Node.js，0.1.5-rc.2）在 PATH 遮蔽用户级新装 0.2.0-rc.2（`shutil.which` 解析到旧版 → `--json`/`--session-id` 将静默降级而版本锁却声称已验证）；`dsh_adapter` 据此支持 `DSH_BIN` 环境变量覆盖（多版本共存标准解法），指向正确版本后演练全 PASS；测试 +19（演练 17 + DSH_BIN 2），全量 279 通过
-- **下一步**：协作模型最终是否调整仍待 1–10 人团队真实痛点数据（按 §7.4 阈值驱动）；完整 headless 运行需先解决 deepseek API 配额（本机 QUOTA 余额不足，外部账户问题）
+- **下一步**：Backlog 可执行项已全部清空（A 发布 / C 增强 / C2 环境均 ✅）；剩余事项均为外部依赖门控——协作模型最终是否调整待 1–10 人团队真实痛点数据（按 §7.4 阈值驱动，opt-in 埋点就绪）、团队启用提交签名后 CI 门禁升级 `--require signed`、完整 headless 运行需补 deepseek API 配额（QUOTA 外部账户问题）、季度切换演练转入周期性执行（`make base-switch-drill`，升级底座前后必跑）
 
 ## 待完成事项（Backlog）
 
@@ -26,7 +26,7 @@
 > 下列为真实待办，按性质分组，避免与上方已勾选的 Phase 明细混淆。
 
 ### A. 待发布（需用户本地操作）
-- [x] **推送领先提交到 GitHub**：用户已于 2026-10-16 本地执行 `git push origin main`，领先提交已全部同步（含 Phase 4g hpc_submit / L4 集成测试 / Phase 4h 底座升级 / 文档梳理 / 协作重评估框架 / 1.13.4 协作埋点扩展 / 1.13.5 P0 身份可信化）。后续提交仍须本地推送（本环境沙箱拦截外发）。
+- [x] **推送领先提交到 GitHub**：2026-10-16 全部同步完成（远端 main HEAD = `0d36a90`，与本地一致；含 Phase 4g–4m：hpc_submit / L4 集成测试 / 底座升级 / 协作重评估框架与埋点 / P0 身份可信化 / preset patch 校验 / RAG 接线 / 季度切换演练）。后续提交仍须本地推送（本环境沙箱拦截外发，且出口对 github.com 不可达）。
 
 ### B. 外部依赖阻塞（非本项目缺陷）
 - [ ] **deepseek API 配额**：完整 headless 端到端运行目前在模型调用处因 `QUOTA`（余额不足）失败。补齐配额后 `dsh --profile headless --json "<task>"` 即可跑通——底座、契约、适配器（`parse_event_stream` / `--session-id` 接管 / `--dump-config-schema`）均已用真实 `0.2.0-rc.2` 验证可用。
@@ -43,10 +43,8 @@
 - [x] **RAG 写入埋点接线**（2026-10-16 落地，见 CHANGELOG 1.13.7）：`vl rag index/query` CLI 入口（`orchestrator/cli.py` `cmd_rag`）+ `sidecar/rag` 索引持久化（`save_index`/`load_index`，落盘 `.verity/rag-index.json`）；实例化 `LiteratureIndex` 时注入 `rag_write_observer(workspace)`，opt-in 开启即自动采集 `rag_index_write` 事件；离线 hash 嵌入器相似度量级低于真实稠密嵌入，查询默认放宽阈值（`OFFLINE_SCORE_THRESHOLD`，`--min-score` 可显式覆盖）。
 - [x] **季度切换演练**（2026-10-16 落地，见 CHANGELOG 1.13.8）：`python scripts/base-switch-drill.py`（或 `make base-switch-drill`）四项检查（接口符合性 / 耦合预算 / 替换模拟 / 版本漂移）+ 契约回归；季度执行或每次升级 deepseek-harness 后执行。**首跑即发现本机旧全局 dsh 遮蔽新版**（已支持 `DSH_BIN` 覆盖；机器侧清理旧全局安装待用户决定，见 version_lock.yml known_differences）。
 
-### C2. 本机环境待办（非项目缺陷）
-- [ ] **旧全局 dsh 清理（仅剩一步：管理员删除）**：`D:\Node.js` 下的 dsh@0.1.5-rc.2 因 OS 权限（EPERM）与主机 safe-delete 保护无法在本环境删除，须在**管理员 PowerShell** 执行一次：
-  `Remove-Item -Recurse -Force "D:\Node.js\node_modules\@deepseek-ai"; Remove-Item -Force "D:\Node.js\dsh","D:\Node.js\dsh.cmd","D:\Node.js\dsh.ps1"`
-  配套已完成（2026-10-16）：npm 全局 prefix 已对齐用户目录 `C:\Users\ASUS\.npm-global`（未来 `npm i -g` 不再需要管理员，根除 EPERM 复发）；`.npm-global` 已追加到用户级 PATH。删除后重开终端，`dsh --version` 应输出 0.2.0-rc.2，季度演练的版本漂移 FAIL 随之消除。
+### C2. 本机环境（2026-10-16 全部处置完成 ✅）
+- [x] **旧全局 dsh 清理**：`D:\Node.js` 下的 dsh@0.1.5-rc.2（含 shims 与包目录）已由用户以管理员权限删除；npm 全局 prefix 已对齐用户目录 `C:\Users\ASUS\.npm-global`（未来 `npm i -g` 不再需要管理员）；`.npm-global` 已追加到用户级 PATH。`dsh --version` 现解析为 **0.2.0-rc.2**（= 版本锁 verified_version），季度演练 5/5 全 PASS（版本漂移已消）。`DSH_BIN` 环境变量保留作为多版本共存的标准出口（当前不需要）。
 
 ---
 

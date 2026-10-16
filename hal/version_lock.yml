@@ -32,4 +32,4 @@ known_differences:
   - "0.2.0-rc.2 已具备 --json / --session-id / --dump-config-schema：事件流与 session 接管不再降级，patch 字段 schema 可用 --dump-config-schema 机读校验"
   - "完整 headless 运行依赖 deepseek API 配额；本机账户 QUOTA（余额不足）导致模型调用失败，属外部账户问题，与 verity-lens 契约无关"
   - "capabilities = 版本锁结论 ∩ 运行期版本特性探测（运行期只收窄不放宽）"
-  - "季度切换演练（2026-10-16 首跑）发现：本机旧全局 dsh（D:/Node.js，0.1.5-rc.2）在 PATH 中遮蔽用户级新装（0.2.0-rc.2），shutil.which 解析到旧版会使 --json/--session-id 静默降级；hal/dsh_adapter 已支持 DSH_BIN 环境变量指向正确版本（演练版本漂移检查可捕获此类遮蔽）。处置进展（2026-10-16）：npm 全局 prefix 已对齐用户级 .npm-global 并加入用户 PATH；旧全局 dsh 删除因 OS 权限（EPERM）须管理员执行（见 TODO Backlog C2）"
+  - "季度切换演练（2026-10-16 首跑）发现并已解决：本机旧全局 dsh（D:/Node.js，0.1.5-rc.2）曾在 PATH 中遮蔽用户级新装（0.2.0-rc.2），shutil.which 解析到旧版会使 --json/--session-id 静默降级。处置：hal/dsh_adapter 支持 DSH_BIN 环境变量（多版本共存出口）；npm 全局 prefix 对齐用户级 .npm-global 并加入用户 PATH；旧全局安装已删除。现 dsh --version = 0.2.0-rc.2（= verified_version），演练 5/5 全 PASS（2026-10-16 复验）"
