@@ -170,26 +170,28 @@ class HarnessAdapter(Protocol):
 #### 2.1.3 能力探测与版本锁
 
 ```yaml
-# hal/version_lock.yml（2026-10-15 实测后的真实值，详见该文件注释）
+# hal/version_lock.yml（2026-10-16 实测后的真实值，详见该文件注释）
 source: "https://github.com/deepseek-ai/deepseek-harness"
-verified_version: "0.1.5-rc.2"        # 本机实测
+verified_version: "0.2.0-rc.2"        # 本机实测（npm @deepseek-ai/dsh@0.2.0-rc.2）
 contract_baseline: "0.2.1-alpha.3"    # 官方 master CLI 契约基线
 capabilities:
   trajectory_fork: false      # launcher CLI 无此命令 → 恒定降级为 replay
   preset_patch: true          # --patch <path>（≥0.1）
   subagent: true              # ctx.subagents 会话内委派
   mcp: true                   # mcp-client StdioConfig
-  session_log_export: true    # headless --json（≥0.2，运行期按版本收窄）
+  session_log_export: true    # headless --json（≥0.2，0.2.0-rc.2 真实底座已验证可解析）
+  session_adopt: true         # headless --session-id（≥0.2，0.2.0-rc.2 真实底座已验证接管）
 # capabilities = 版本锁结论 ∩ 运行期版本特性探测（只收窄不放宽）
 # 升级流程：改 version_lock.yml → make hal-contract-test → 通过则更新；失败则 HAL 修复
 ```
 
 **工程纪律**：`hal/` 单测覆盖率 100%；每次底座版本升级先跑 `make hal-contract-test`，再跑 Golden 回归；每季度做一次"切换演练"评估备选底座接入成本。
 
-**底座现状（2026-10-15）**：DSH 为 developer preview（官方明示会有破坏性变更）。
-实测 0.1.5-rc.2 的 `headless` 仅有裸 task 参数，无 `--json` / `--session-id`，
-launcher 亦无 `--dump-config-schema`（三者均为 0.2.x 引入）→ HAL 按版本门控，
-丢弃不支持的 flag 并写 `degraded` 事件。HAL↔DSH 映射见 `interfaces.md §1.1`。
+**底座现状（2026-10-16）**：DSH 为 developer preview（官方明示会有破坏性变更）。
+已升级实测 `0.2.0-rc.2`：`headless --json`（NDJSON 事件流）、`--session-id`（Session 接管）、
+`--dump-config-schema`（Cordis 配置 JSON Schema）三者均已具备并在真实底座验证。
+完整 headless 运行仅因 deepseek API QUOTA（余额不足，外部账户）在模型调用处失败，与 verity-lens 契约无关。
+HAL↔DSH 映射见 `interfaces.md §1.1`。
 
 ### 2.2 Orchestrator Lite：轻量编排内核
 

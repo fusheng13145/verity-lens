@@ -42,7 +42,8 @@ class HarnessAdapter(Protocol):
 
 底座 = [deepseek-ai/deepseek-harness](https://github.com/deepseek-ai/deepseek-harness)（MIT，developer preview）。
 契约基线取自官方 `docs/cli-help.md` / `docs/config-catalog.md` / `docs/capability-seams.md`；
-本机实测版本见 `hal/version_lock.yml`。
+本机实测版本见 `hal/version_lock.yml`（当前 `verified_version = 0.2.0-rc.2`，2026-10-16 实测；
+`--json` / `--session-id` / `--dump-config-schema` 已在真实底座验证，上表 ≥0.2 接口均已激活）。
 
 | HAL 接口 | DSH 真实表面 | 版本要求 |
 |----------|---------------|----------|

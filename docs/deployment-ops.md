@@ -28,6 +28,7 @@ make hal-contract-test                                 # 验证 HAL 与当前底
 ## 3. 底座接入与版本锁
 
 - `hal/version_lock.yml` 记录：证据来源仓库、`verified_version`（本机实测版本）、`contract_baseline`（官方 CLI 契约基线）、能力集、已知差异。
+- 当前 `verified_version = 0.2.0-rc.2`（2026-10-16 实测；npm `@deepseek-ai/dsh@0.2.0-rc.2`）。`--json` / `--session-id` / `--dump-config-schema` 已在真实底座验证：`--json` NDJSON 事件流可被 `parse_event_stream` 解析、`--session-id` 已知 id 接管成功 / 未知 id 报 `does not exist`；完整运行仅因 deepseek API QUOTA（外部账户）失败。
 - 升级：改版本锁 → `make hal-contract-test` → 通过才生效；失败由 HAL 适配修复。
 - **能力集 = 版本锁结论 ∩ 运行期特性探测**（`DSHAdapter.capabilities()`）：运行期按 `dsh --version` 收窄，避免对旧底座发出未知选项。
 - 特性版本门控（`VERSION_FEATURE_MIN`）：`--patch` ≥0.1；`--json` / `--session-id` / `--dump-config-schema` ≥0.2。底座不支持时自动丢弃该 flag 并写 `degraded` 事件。
@@ -54,7 +55,7 @@ Bundle 的声明格式到该配置的映射在 `orchestrator/bundle_loader.py:to
 | 情形 | 行为 |
 |------|------|
 | `dsh` 不在 PATH | `capabilities()` 全 False；`start_session` 写 `degraded:harness_unavailable` 事件 |
-| 底座 < 0.2 | 丢弃 `--json` / `--session-id`，写 `degraded:unsupported_flag`，退化为最终消息流 |
+| 底座 < 0.2 | 丢弃 `--json` / `--session-id`，写 `degraded:unsupported_flag`，退化为最终消息流（当前 verified 底座 0.2.0-rc.2 不触发此行） |
 | MCP / patch 能力不可用 | `vl bundle load` 输出 `[DEGRADED]`，改为编排层直连 sidecar / 启动参数注入系统提示 |
 
 ## 4. 沙箱配置（安全隔离）

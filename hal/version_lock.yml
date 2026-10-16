@@ -5,25 +5,30 @@
 #   docs/cli-help.md          launcher / profile / --patch / headless --json / --session-id
 #   docs/capability-seams.md  ctx.skills / ctx.subagents / ctx.mcpResources / ctx.sessionPersistence
 #   docs/config-catalog.md    mcp-client StdioConfig（serverName / command / args …）
-# 本机实测（2026-10-15，npm 安装）：
-#   dsh --version                  → 0.1.5-rc.2
-#   dsh --help                     → 有 --profile / --patch / --dump-config / --from-default-profile
-#   dsh --profile headless --help  → 仅裸 task 参数，无 --json / --session-id
-#   dsh --dump-config-schema       → unknown option（0.2.x 才引入）
+# 本机实测（2026-10-16，npm 安装 @deepseek-ai/dsh@0.2.0-rc.2）：
+#   dsh --version                  → 0.2.0-rc.2
+#   dsh --help                     → 有 --profile / --patch / --dump-config / --dump-config-schema / --from-default-profile
+#   dsh --profile headless --help  → 有 --json / --session-id（NDJSON 事件流 + Session 接管）
+#   dsh --profile headless --dump-config-schema → 输出 Cordis 配置 JSON Schema（draft 2020-12）
+# 端到端联调（2026-10-16，真实底座）：
+#   --json 真实事件流已被 parse_event_stream 解析；--session-id 已知 id 接管成功、未知 id
+#   报 "does not exist"；完整运行因 deepseek API QUOTA（余额不足，外部账户）在模型调用处
+#   失败，非底座 / 契约问题。
 source: "https://github.com/deepseek-ai/deepseek-harness"
-verified_version: "0.1.5-rc.2"        # 本机实测通过的版本
-contract_baseline: "0.2.1-alpha.3"    # 官方 master 契约基线（CLI 文档来源）
-verified_at: "2026-10-15"
+verified_version: "0.2.0-rc.2"        # 本机实测通过的版本（npm @deepseek-ai/dsh@0.2.0-rc.2）
+contract_baseline: "0.2.1-alpha.3"    # 官方 master 契约基线（CLI 文档来源，与 0.2.0-rc.2 门控特性一致）
+verified_at: "2026-10-16"
 capabilities:
   # launcher CLI 未暴露轨迹分叉命令；会话内"已完成前缀分叉"走 ctx.subagents 的
   # forkProvider / subagent-fork-in-process，属会话内委派，HAL 不穿透 → 恒定降级为 replay
   trajectory_fork: false
-  preset_patch: true        # --patch <path>（0.1.5-rc.2 实测存在）
+  preset_patch: true        # --patch <path>（0.1.5-rc.2 起即有；0.2.0-rc.2 复验）
   subagent: true            # ctx.subagents + tool-subagent + agent-team（会话内委派）
   mcp: true                 # @deepseek-ai/dsh-mcp-client StdioConfig
-  session_log_export: true  # headless --json（NDJSON）；需底座 ≥0.2，运行期收窄
+  session_log_export: true  # headless --json（NDJSON）；0.2.0-rc.2 真实底座已验证可解析
+  session_adopt: true       # headless --session-id（≥0.2）；0.2.0-rc.2 真实底座已验证接管 / 未知 id 报错
 known_differences:
   - "DSH 处于 developer preview，官方明示会有破坏性变更；每次升级须重跑 hal-contract-test"
-  - "本机 0.1.5-rc.2 缺 --json / --session-id / --dump-config-schema（0.2.x 才引入）：事件流与 session 接管自动降级为最终消息流，patch 字段 schema 无法机读校验"
-  - "patch 文件内部 schema 官方文档未公开；verity-lens 的 preset_patch 以 --patch 传入，字段合法性需底座 ≥0.2 时用 --dump-config-schema 复核"
+  - "0.2.0-rc.2 已具备 --json / --session-id / --dump-config-schema：事件流与 session 接管不再降级，patch 字段 schema 可用 --dump-config-schema 机读校验"
+  - "完整 headless 运行依赖 deepseek API 配额；本机账户 QUOTA（余额不足）导致模型调用失败，属外部账户问题，与 verity-lens 契约无关"
   - "capabilities = 版本锁结论 ∩ 运行期版本特性探测（运行期只收窄不放宽）"

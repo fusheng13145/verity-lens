@@ -27,7 +27,7 @@ golden:          ## L2：Golden 轨迹回归
 	$(VENV_PY) -m pytest tests/golden -q
 
 hal-contract-test: ## L4：HAL 契约测试（底座升级必跑）
-	$(VENV_PY) -m pytest tests/hal_contract -q
+	$(VENV_PY) -m pytest hal/contract_tests -q
 
 correctness:     ## L3：科研正确性抽检
 	$(VENV_PY) -m pytest tests/correctness -q

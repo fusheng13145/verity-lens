@@ -2,6 +2,32 @@
 
 > 遵循 Keep a Changelog 风格，版本号 `MAJOR.MINOR.PATCH`。
 
+## [1.13.2] - 2026-10-16 — 底座升级 0.2.0-rc.2 + 事件流/session 接管联调
+
+### Changed
+- **`hal/version_lock.yml`**：`verified_version` 由 `0.1.5-rc.2` 升到 `0.2.0-rc.2`（npm `@deepseek-ai/dsh@0.2.0-rc.2` 实测）；
+  `capabilities` 新增 `session_adopt: true`；`known_differences` 更新为"0.2.0-rc.2 已具备
+  `--json`/`--session-id`/`--dump-config-schema`，事件流与 session 接管不再降级，patch schema 可机读校验"。
+- 文档同步：`deployment-ops.md` / `interfaces.md` / `design-blueprint.md` / `README.md` / `TODO.md`
+  的实测版本与"≥0.2 能力已激活"表述。
+
+### Verified（真实底座端到端联调）
+- `dsh --profile headless --json "<task>"` 真实输出 NDJSON 事件流（`session`/`status`/`final` 类型），
+  可被 `DSHAdapter.parse_event_stream` 逐行解析。
+- `dsh --profile headless --session-id <id>`：已知 id 成功接管并续跑；未知 id 精确报错
+  `session "..." does not exist; omit --session-id to start a new Session`（与适配器/文档预期一致）。
+- `dsh --profile headless --dump-config-schema` 输出 Cordis 配置 JSON Schema（draft 2020-12），
+  可用于 preset patch 字段机读校验。
+- `make hal-contract-test` 40 例全过。
+
+### Fixed
+- **`Makefile` 的 `hal-contract-test` 目标指向错误目录** `tests/hal_contract`（不存在）→
+  更正为 `hal/contract_tests`（与 `pyproject.toml` 的 `testpaths` 一致）。
+
+### Known Limitation
+- 完整 headless 运行因 deepseek API `QUOTA`（余额不足，外部账户）在模型调用处失败，非底座/契约问题；
+  修复配额后即可端到端跑通。
+
 ## [1.13.1] - 2026-10-15 — L4：Sidecar 双通道边界保真集成测试
 
 ### Added
@@ -116,7 +142,8 @@
 - 全量 **149 个用例**通过（原 125 + 新增 24）。
 
 > 注：底座 ≥0.2 的 NDJSON 事件流 / `--session-id` 接管 / patch schema 机读校验
-> （`--dump-config-schema`）待本机底座升级后联调；当前 0.1.5-rc.2 下这些能力按契约自动降级。
+> （`--dump-config-schema`）已在 **1.13.2（2026-10-16）** 升级 `0.2.0-rc.2` 后于真实底座联调通过；
+> 仅完整运行受 deepseek API QUOTA 限制。
 
 ## [1.9.0] - 2026-10-15 — Phase 4c（三学科升 L2 + Bundle 加载器）
 

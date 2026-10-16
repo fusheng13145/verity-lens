@@ -12,7 +12,8 @@
   - Phase 4e ✅ 2026-10-15：**科研正确性闭环**——power_analysis 工具落地 + verify_with_sidecar 真复算（p↔CI 自洽性 / 功效）+ L3 测试层从空目录变为 16 例
   - Phase 4f ✅ 2026-10-15：**敏感数据脱敏工具落地**——`desensitize`（field_mask / k_anonymity / dp_aggregate[ε=1.0] / scan_text[E10 守卫]）+ biomed/compsci 注册 verity-desensitize MCP
   - Phase 4g ✅ 2026-10-15：**HPC 长任务提交工具落地**——`hpc_submit`（可插拔 backend：dry_run/mock/slurm/pbs；dry_run/mock 确定性、不实际执行，slurm/pbs 显式降级）+ 三学科注册 verity-hpc-submit MCP
-- **下一步**：底座 ≥0.2 升级后补事件流/session 接管联调 + patch schema 机读校验（`--dump-config-schema`）；协作模型按真实痛点重评估（不预设方案）
+  - Phase 4h ✅ 2026-10-16：**底座升级 0.2.0-rc.2 + 事件流/session 接管联调**——npm 装 `@deepseek-ai/dsh@0.2.0-rc.2`（全局目录 EPERM，改装用户级 prefix）；真实底座验证 `--json` NDJSON 事件流可被 `parse_event_stream` 解析、`--session-id` 已知 id 接管成功/未知 id 报 `does not exist`、`--dump-config-schema` 输出 Cordis JSON Schema；`hal/version_lock.yml` verified_version 钉到 0.2.0-rc.2；契约测试 40 例全过（修正 Makefile `hal-contract-test` 指向错误目录 `tests/hal_contract`→`hal/contract_tests`）。完整 headless 运行仅因 deepseek API QUOTA 失败（外部账户）
+- **下一步**：协作模型按真实痛点重评估（蓝图明确"不预设方案"，待 1–10 人团队实际协作反馈）；完整 headless 运行需先解决 deepseek API 配额（本机 QUOTA 余额不足，外部账户问题）
 
 ## Phase 4：扩展评估（按需）
 
@@ -38,7 +39,7 @@
   - [x] MCP 声明映射到 mcp-client 真实 `StdioConfig`（serverName 正则 / command+args / 工具名 `mcp__<server>__<raw>`）
   - [x] Windows 兼容：`shutil.which` 解析 npm `.cmd` shim + 非 UTF-8 输出容错解码
   - [x] HAL 契约测试重写为真实命令行形状 + 版本降级（39 例），并含真实 dsh 实测用例
-  - [ ] 底座升级至 ≥0.2 后：NDJSON 事件流 / session 接管联调 + patch schema 机读校验（`--dump-config-schema`）
+  - [x] 底座升级至 ≥0.2 后：NDJSON 事件流 / session 接管联调 + patch schema 机读校验（`--dump-config-schema`）（2026-10-16 实测 0.2.0-rc.2 完成；完整运行受 deepseek API QUOTA 限制）
 - [x] **Phase 4e** — 科研正确性闭环（2026-10-15）
   - [x] `sidecar/tools/power_analysis.py`：先验样本量 / 事后功效（正态近似双侧），带 TOOL_SPEC + stdio 入口
   - [x] `verify_with_sidecar` 由「仅探测工具可用」升级为真实复算：组统计量完整复算 + p↔CI 交叉复算 + 功效复算；不一致报 mismatch
