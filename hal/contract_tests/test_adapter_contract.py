@@ -375,3 +375,23 @@ def test_preset_patch_scopes_do_not_collide(tmp_path):
     assert a.path != b.path
     assert "biomed" in a.path.read_text(encoding="utf-8")
     assert "materials" in b.path.read_text(encoding="utf-8")
+
+
+# ── DSH_BIN 环境变量覆盖（多版本共存 / 旧版遮蔽场景，Backlog C ②演练发现）──
+
+def test_dsh_bin_env_override(monkeypatch):
+    """未显式传 dsh_bin 时，DSH_BIN 环境变量生效（指向正确版本的全路径）。"""
+    monkeypatch.setenv("DSH_BIN", "C:/fake/prefix/dsh.cmd")
+    a = DSHAdapter()
+    assert a.argv_prefix == ("C:/fake/prefix/dsh.cmd",)
+
+    monkeypatch.delenv("DSH_BIN", raising=False)
+    b = DSHAdapter()
+    assert b.dsh_bin == "dsh"  # 未设置 → 回退裸名
+
+
+def test_dsh_bin_explicit_arg_wins_over_env(monkeypatch):
+    """显式参数优先于环境变量（测试桩 / 调用方需要确定性时不受环境污染）。"""
+    monkeypatch.setenv("DSH_BIN", "C:/fake/prefix/dsh.cmd")
+    a = DSHAdapter(dsh_bin="explicit-dsh")
+    assert a.dsh_bin == "explicit-dsh"

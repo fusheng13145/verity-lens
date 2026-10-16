@@ -2,6 +2,33 @@
 
 > 遵循 Keep a Changelog 风格，版本号 `MAJOR.MINOR.PATCH`。
 
+## [1.13.8] - 2026-10-16 — 季度切换演练自动化 + 首跑抓到 dsh 版本遮蔽（Backlog C ②）
+
+### Added
+- **底座切换季度演练**：`hal/switch_drill.py` 把「定期评估备选底座接入成本」从纸面结论
+  变为可重复执行的自动化体检，四项核心检查：
+  - `interface_conformance`：`DSHAdapter` 对 `HarnessAdapter` Protocol 全部 12 个方法做
+    存在性 + 签名级符合性核验（Protocol 参数名必须齐全，实现新增参数须有默认值）；
+  - `coupling_scan`：orchestrator/sidecar/tests 对底座实现（`hal.dsh_adapter` /
+    `hal.capability_probe`）的直连行项扫描（预算 6，当前 2）——命中清单即换底座时要改的文件；
+  - `swap_simulation`：无 DSH 依赖的 `_MinimalAdapter` 通过 `runtime_checkable` Protocol
+    检查并覆盖全部 `CAPABILITY_KEYS`，证明接口可被第三方（备选底座）实现；
+  - `version_drift`：本机 `dsh --version` vs `version_lock.yml` verified_version 漂移检测
+    （漂移 = 底座已升级但契约未复验，FAIL；底座不在 PATH 时 skip）；
+  可选第五项：全量 `hal/contract_tests` 契约回归（默认开启，`--skip-contract-tests` 跳过）。
+- **演练 CLI**：`scripts/base-switch-drill.py`（`--skip-contract-tests` / `--budget` / `--json`，
+  exit 0=健康 / 1=存在 FAIL）+ Makefile `base-switch-drill` 目标。季度执行或每次升级底座后执行。
+- **`DSH_BIN` 环境变量**：`dsh_adapter.DSHAdapter` 未显式传 `dsh_bin` 时支持
+  `DSH_BIN` 环境变量覆盖（多版本共存标准解法），显式参数仍优先。
+
+### Fixed
+- **首跑即抓到真实问题**：本机旧全局 dsh（`D:/Node.js`，0.1.5-rc.2）在 PATH 中遮蔽用户级
+  新装（0.2.0-rc.2），`shutil.which` 解析到旧版会使 `--json` / `--session-id` 静默降级，
+  而 `version_lock.yml` 却声称 0.2.0-rc.2 已验证——版本漂移检查精确捕获；
+  设 `DSH_BIN` 指向正确版本后演练全 PASS。机器侧清理旧全局安装待用户决定（已记入
+  `version_lock.yml` known_differences 与 TODO Backlog C2）。
+- 测试：新增 19 例（演练 17 + DSH_BIN 2）；全量 279 通过。
+
 ## [1.13.7] - 2026-10-16 — RAG 侧车接入编排 CLI + 写入埋点激活（Backlog C ①）
 
 ### Added

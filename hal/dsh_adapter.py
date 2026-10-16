@@ -21,6 +21,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -33,6 +34,9 @@ from hal.capability_probe import load_capabilities, load_version_lock
 from hal.interface import CAPABILITY_KEYS
 
 DEFAULT_DSH_BIN = "dsh"
+#: 多版本共存时可用环境变量指定底座可执行文件（如旧全局 dsh 遮蔽用户级新装时：
+#: DSH_BIN=%USERPROFILE%\\.npm-global\\dsh.cmd）。DSHAdapter 未显式传 dsh_bin 时生效。
+DSH_BIN_ENV = "DSH_BIN"
 #: 未全局安装时的等价入口（官方 README：npx @deepseek-ai/dsh web）
 NPM_DSH_ARGV = ("npx", "@deepseek-ai/dsh")
 
@@ -121,16 +125,20 @@ def parse_version(raw: str) -> tuple[int, int, int]:
 class DSHAdapter:
     """DeepSeek Harness 适配实现（经 `dsh` CLI 子进程交互）。
 
-    `dsh_bin` 可传单可执行名（默认 `dsh`）或命令前缀
-    （如 `("npx", "@deepseek-ai/dsh")`），后者用于未全局安装的环境。
+    `dsh_bin` 可传单可执行名或命令前缀（如 `("npx", "@deepseek-ai/dsh")`，用于未全局
+    安装的环境）；未显式指定时依次解析：环境变量 ``DSH_BIN`` → 裸名 ``dsh``。
+    环境变量用于多版本共存场景（如旧全局 dsh 遮蔽用户级新装时指向新版全路径）。
     """
 
     def __init__(
         self,
-        dsh_bin: str | tuple[str, ...] = DEFAULT_DSH_BIN,
+        dsh_bin: str | tuple[str, ...] | None = None,
         version_lock: Path | None = None,
         timeout: float = 600.0,
     ):
+        if dsh_bin is None:
+            # 未显式指定时允许环境变量覆盖（多版本共存 / 旧版遮蔽场景），最终回退裸名 `dsh`
+            dsh_bin = os.environ.get(DSH_BIN_ENV) or DEFAULT_DSH_BIN
         self.argv_prefix = (dsh_bin,) if isinstance(dsh_bin, str) else tuple(dsh_bin)
         self.dsh_bin = self.argv_prefix[0]  # 可执行名（用于 which 探测）
         self.version_lock_path = version_lock or (Path(__file__).parent / "version_lock.yml")

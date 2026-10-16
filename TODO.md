@@ -17,6 +17,7 @@
   - Phase 4j ✅ 2026-10-16：**P0 身份可信化**——`orchestrator/identity.py`（`resolve_identity` 可信度分级 `unverified`/`self_attested`/`mismatch`/`signed_verified` + `commit_signature_status` 读 GPG/SSH 签名作密码学锚点）+ `vl identity` 命令（`--require {set,coherent,signed}` CI 强制门禁）+ `scripts/check-identity.sh`（含 `--allowed-email-domain`）+ `.github/workflows/ci.yml` + Makefile `identity-check`；全量 233 通过。身份从「口头约定」升级为「可分级、可强制、可密码学锚定」，但不改变协作模型本身
   - Phase 4k ✅ 2026-10-16：**preset patch 机读校验 + DSH schema 钉固**（Backlog C）——`orchestrator/patch_schema.py`（`validate_preset_patch` 按 JSON Schema 严格校验 preset_patch 声明 + `pin_dsh_schema` 把真实 DSH 配置 schema 钉到 `.verity/dsh-config-schema.json` 作契约参考；实测 0.2.0-rc.2 schema 为 Cordis 风格 root array，故校验针对 verity 契约而非 DSH schema）+ `DSHAdapter.dump_config_schema()`（0.2.x 特性门控）+ `vl bundle load --check-patch-schema`（默认关闭，可选增强）+ `docs/bundle-registry.md` §3 说明；全量 247 通过。诚实边界：verity preset_patch 尚未映射为 DSH 真正的 Cordis 叠加层（patch 文件格式官方未公开）
   - Phase 4l ✅ 2026-10-16：**RAG 侧车接入编排 CLI + 写入埋点激活**（Backlog C ①）——`vl rag index/query`（`cmd_rag`：目录/文件分片索引 + 检索，`--glob`/`--top-k`/`--min-score`/`--reset`/`--json`/`--force-citation-only`）+ 索引持久化（`literature_rag.save_index/load_index` 落盘 `.verity/rag-index.json`，跨进程共享，按 chunk_id 去重防重复索引膨胀）+ `rag_write_observer` 接线（opt-in 开启即记 `rag_index_write`，关闭零副作用）+ 离线阈值修正（`OFFLINE_SCORE_THRESHOLD=0.05`：hash 嵌入器相似度量级 0.5~0.85 低于真实稠密嵌入的蓝图阈值 0.72，`--min-score` 可显式覆盖）；实测索引 docs/ 18 文件 → 92 分片、检索正确命中 collab.md 相关分片；全量 260 通过
+  - Phase 4m ✅ 2026-10-16：**季度切换演练自动化**（Backlog C ②）——`hal/switch_drill.py`（接口符合性 12 方法签名级核验 / 耦合扫描 2/6 行项预算 / 替换模拟 MinimalAdapter 证明接口可实现 / 版本漂移检测 / 可选契约回归）+ `scripts/base-switch-drill.py` CLI（`--skip-contract-tests`/`--budget`/`--json`）+ Makefile `base-switch-drill`；**首跑即抓到真实问题**：本机旧全局 dsh（D:/Node.js，0.1.5-rc.2）在 PATH 遮蔽用户级新装 0.2.0-rc.2（`shutil.which` 解析到旧版 → `--json`/`--session-id` 将静默降级而版本锁却声称已验证）；`dsh_adapter` 据此支持 `DSH_BIN` 环境变量覆盖（多版本共存标准解法），指向正确版本后演练全 PASS；测试 +19（演练 17 + DSH_BIN 2），全量 279 通过
 - **下一步**：协作模型最终是否调整仍待 1–10 人团队真实痛点数据（按 §7.4 阈值驱动）；完整 headless 运行需先解决 deepseek API 配额（本机 QUOTA 余额不足，外部账户问题）
 
 ## 待完成事项（Backlog）
@@ -40,7 +41,10 @@
 ### C. 可选增强（非阻塞，按需）
 - [x] **preset patch 机读校验**（2026-10-16 落地，见 CHANGELOG 1.13.6）：`orchestrator/patch_schema.py` 严格 JSON Schema 校验 preset_patch 声明 + `vl bundle load --check-patch-schema` 钉固真实 DSH 配置 schema 作契约参考；默认关闭，可选增强。
 - [x] **RAG 写入埋点接线**（2026-10-16 落地，见 CHANGELOG 1.13.7）：`vl rag index/query` CLI 入口（`orchestrator/cli.py` `cmd_rag`）+ `sidecar/rag` 索引持久化（`save_index`/`load_index`，落盘 `.verity/rag-index.json`）；实例化 `LiteratureIndex` 时注入 `rag_write_observer(workspace)`，opt-in 开启即自动采集 `rag_index_write` 事件；离线 hash 嵌入器相似度量级低于真实稠密嵌入，查询默认放宽阈值（`OFFLINE_SCORE_THRESHOLD`，`--min-score` 可显式覆盖）。
-- [ ] **季度切换演练**：蓝图要求定期评估备选底座接入成本，预防 deepseek-harness 预览版破坏性变更。
+- [x] **季度切换演练**（2026-10-16 落地，见 CHANGELOG 1.13.8）：`python scripts/base-switch-drill.py`（或 `make base-switch-drill`）四项检查（接口符合性 / 耦合预算 / 替换模拟 / 版本漂移）+ 契约回归；季度执行或每次升级 deepseek-harness 后执行。**首跑即发现本机旧全局 dsh 遮蔽新版**（已支持 `DSH_BIN` 覆盖；机器侧清理旧全局安装待用户决定，见 version_lock.yml known_differences）。
+
+### C2. 本机环境待办（非项目缺陷）
+- [ ] **旧全局 dsh 遮蔽**：`D:\Node.js\dsh`（0.1.5-rc.2）在 PATH 中先于用户级 `.npm-global`（0.2.0-rc.2）。二选一：① 卸载旧全局安装（`npm uninstall -g @deepseek-ai/dsh`，注意旧 prefix 权限）；② 系统环境变量设 `DSH_BIN=C:\Users\ASUS\.npm-global\dsh.cmd`（DSHAdapter 已支持）。未处理前演练会报版本漂移 FAIL（这正是演练的职责）。
 
 ---
 

@@ -7,7 +7,7 @@ VENV_PY := $(VENV)/Scripts/python.exe   # Windows；Linux/macOS 请用 $(VENV)/b
 WEB     := web
 
 .PHONY: help venv install schema-check golden hal-contract-test correctness \
-        integration identity-check test api web reproduce clean
+        integration identity-check base-switch-drill test api web reproduce clean
 
 help:            ## 显示帮助
 	@grep -E '^[a-zA-Z_-]+:.*?##' $(MAKEFILE_LIST) \
@@ -37,6 +37,9 @@ integration:     ## L4：Sidecar 工具 stdio 边界 ↔ 进程内模块 输出�
 
 identity-check:  ## P0：身份可信化门禁（默认 coherent；CI 可用 --require signed）
 	bash scripts/check-identity.sh --require coherent --path .
+
+base-switch-drill: ## 季度演练：底座可替换性体检（升级 deepseek-harness 前后必跑）
+	$(VENV_PY) scripts/base-switch-drill.py
 
 test:            ## 运行全部测试
 	$(VENV_PY) -m pytest -q
