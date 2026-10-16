@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 
 import pytest
+import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
@@ -123,3 +124,61 @@ def test_failure_ledger_accepts_approved(client):
     assert r.status_code == 200
     assert r.json()["entry_id"] == "F-002"
     assert client.get("/api/projects/proj_test/failure_ledger").json()["entries"][-1]["id"] == "F-002"
+
+
+def test_failure_ledger_routes_via_apply_decision(client, tmp_path):
+    """P0-4：登记 METH 失败须真正回流（实验状态被更新），而非仅追加 ledger。"""
+    ws = tmp_path / "proj_test"
+    (ws / "experiments").mkdir(parents=True, exist_ok=True)
+    (ws / "experiments" / "exp_001.yaml").write_text(
+        "experiment_id: exp_001\nparent_hypothesis: H1\nobjective: o\n"
+        "success_criteria:\n  - {metric: x, condition: '>=', threshold: 0.5}\nstatus: running\n",
+        encoding="utf-8",
+    )
+    (ws / "docs" / "hypothesis_tree.json").write_text(
+        '{"root_question": "", "nodes": [{"id": "H1", "status": "proposed", "confidence": null}], '
+        '"metadata": {"created_at": null, "updated_at": null, "version": 0}}\n',
+        encoding="utf-8",
+    )
+    entry = {
+        "id": "F-010",
+        "experiment_id": "exp_001",
+        "hypothesis_id": "H1",
+        "phase": "experiment",
+        "detected_at": "2026-10-20T14:00:00Z",
+        "classification": {"category": "METH", "code": "X", "confidence": 0.8},
+        "decision": {"type": "revise_experiment", "approved_by": "pi"},
+    }
+    r = client.post("/api/projects/proj_test/failure_ledger", json=entry)
+    assert r.status_code == 200
+    body = r.json()
+    assert body["action"] == "revise_experiment"
+    assert body["experiment_status"] == "concluded_failed"
+    # 实验文件状态应被 apply_decision 更新（闭环真正发生）
+    exp = yaml.safe_load((ws / "experiments" / "exp_001.yaml").read_text(encoding="utf-8"))
+    assert exp["status"] == "concluded_failed"
+    assert any(
+        e["id"] == "F-010"
+        for e in client.get("/api/projects/proj_test/failure_ledger").json()["entries"]
+    )
+
+
+# ── DOI 可验证率度量（审计 #10）──────────────────────────────────────
+
+
+def test_doi_metrics_get_computes_offline(client):
+    r = client.get("/api/projects/proj_test/doi-metrics")
+    assert r.status_code == 200
+    body = r.json()
+    assert {"total", "valid_format", "verification_rate", "online"} <= set(body)
+    assert body["online"] is False
+
+
+def test_doi_metrics_post_persists(client, tmp_path):
+    r = client.post("/api/projects/proj_test/doi-metrics", json={"online": False})
+    assert r.status_code == 200
+    # 已持久化：docs/doi_verification.json 落盘，GET 返回同一份
+    stored = tmp_path / "proj_test" / "docs" / "doi_verification.json"
+    assert stored.exists()
+    r2 = client.get("/api/projects/proj_test/doi-metrics")
+    assert r2.json()["checked_at"] == r.json()["checked_at"]

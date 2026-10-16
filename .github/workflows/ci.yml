@@ -18,9 +18,9 @@ jobs:
         run: |
           python -m pip install -U pip
           python -m pip install -e .
-      - name: Schema / Golden / HAL 契约 / 集成 / 正确性
+      - name: Schema / Golden / HAL 契约 / 集成 / 正确性 / API / Finalize / Sidecar / Unit
         run: |
-          python -m pytest tests/schema tests/golden hal/contract_tests tests/integration tests/correctness -q
+          python -m pytest tests/schema tests/golden hal/contract_tests tests/integration tests/correctness tests/api tests/finalize tests/sidecar tests/unit -q
 
   identity:
     runs-on: ubuntu-latest

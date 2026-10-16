@@ -78,9 +78,22 @@ def _make_workspace(tmp_path, experiments: dict[str, str], *, summary: bool = Tr
     for name, content in experiments.items():
         (ws / "experiments" / name).write_text(content, encoding="utf-8")
     if summary:
-        (ws / "analysis" / "summary.md").write_text("# summary\n\ncomplete\n", encoding="utf-8")
+        # 实质内容（≥200 字节 + 统计结论签名），满足 analysis_summary_substantive
+        (ws / "analysis" / "summary.md").write_text(
+            "# 分析结果\n\n本研究比较了干预组与对照组的均值差异。\n\n"
+            "效应量 (effect size) = 0.82（Cohen's d）。\n"
+            "95% 置信区间 = [0.41, 1.23]。\np 值 = 0.003，小于 0.05 显著性水平，拒绝原假设。\n\n"
+            "结论：干预组显著优于对照组，假设得到支持。\n",
+            encoding="utf-8",
+        )
     if figure:
-        (ws / "figures" / "fig1.png").write_text("x", encoding="utf-8")
+        # 真实图像产物（SVG，含 <svg 且 ≥64 字节），满足 figures_substantive
+        (ws / "figures" / "fig1.svg").write_text(
+            '<svg xmlns="http://www.w3.org/2000/svg" width="640" height="400">'
+            '<rect width="100%" height="100%" fill="#ffffff"/>'
+            '<text x="16" y="24" font-size="16">Effect size by group</text></svg>\n',
+            encoding="utf-8",
+        )
     return ws
 
 

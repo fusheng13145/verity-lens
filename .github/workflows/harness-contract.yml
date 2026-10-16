@@ -1,0 +1,48 @@
+name: Harness Contract (真实底座)
+
+# 审计 #8：让 L4 契约测试的「真实 dsh」用例在 CI 真正触碰底座。
+# - 真实 dsh 不可达（未发布 / 网络受限 / 需 API 配额）时，相关用例按 skipif 优雅跳过，
+#   主 test job 的离线桩契约（hal/contract_tests）仍完整覆盖适配器代码路径，CI 保持绿；
+# - 当环境可取得 dsh（npm 全局安装或 DSH_BIN 指向已装二进制）时，real_dsh 用例真正驱动
+#   版本解析 / 能力探测 / start_session 事件流，实证「失败必留痕」硬规则在真实底座上成立。
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  harness-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install Python project
+        run: |
+          python -m pip install -U pip
+          python -m pip install -e .
+      - name: 尝试安装 DSH（尽力而为，失败不阻断 CI）
+        id: install-dsh
+        continue-on-error: true
+        run: |
+          npm install -g @deepseek-ai/dsh || true
+          echo "DSH_GLOBAL_BIN=$(npm bin -g 2>/dev/null)" >> "$GITHUB_ENV"
+      - name: 定位 dsh 并运行真实底座契约测试
+        run: |
+          export PATH="${DSH_GLOBAL_BIN}:$PATH"
+          if command -v dsh >/dev/null 2>&1 || [ -n "${DSH_BIN}" ]; then
+            echo "::notice::检测到 dsh，运行真实底座契约测试"
+          else
+            echo "::warning::未检测到 dsh，real_dsh 用例将按 skipif 跳过（离线桩契约已在 CI 主 job 覆盖）"
+          fi
+          python -m pytest hal/contract_tests -q -k real_dsh
+      - name: 离线契约测试仍须全绿（适配器代码路径不被真实底座缺失影响）
+        run: |
+          python -m pytest hal/contract_tests -q

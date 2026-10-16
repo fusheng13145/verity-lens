@@ -7,7 +7,8 @@ VENV_PY := $(VENV)/Scripts/python.exe   # Windows；Linux/macOS 请用 $(VENV)/b
 WEB     := web
 
 .PHONY: help venv install schema-check golden hal-contract-test correctness \
-        integration identity-check base-switch-drill test api web reproduce clean
+        integration identity-check base-switch-drill test api web reproduce \
+        harness-install clean
 
 help:            ## 显示帮助
 	@grep -E '^[a-zA-Z_-]+:.*?##' $(MAKEFILE_LIST) \
@@ -50,8 +51,12 @@ api:             ## 启动 Headless API（:8000）
 web:             ## 启动前端开发服务器（:5173）
 	cd $(WEB) && npm run dev
 
-reproduce:       ## 复现：从 data/raw 到 figures（占位）
-	@echo "[reproduce] 按 manifest.yaml 复现；Phase 1 实现"
+reproduce:       ## 复现：从 data/raw 经分析到 figures（确定性绘图 + 基线比对）
+	$(VENV_PY) scripts/reproduce.py --workspace .
+
+harness-install:  ## 安装真实底座（deepseek-harness）；缺失时 real_dsh 契约用例优雅跳过
+	npm install -g @deepseek-ai/dsh || true
+	@echo "安装完成；运行 make hal-contract-test 将执行真实底座契约测试（需 API 配额）"
 
 clean:           ## 清理缓存
 	-rm -rf .pytest_cache **/__pycache__ *.egg-info 2>/dev/null || true

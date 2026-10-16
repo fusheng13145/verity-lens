@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import fnmatch
 import json
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -101,7 +102,9 @@ def compute_facts(project: dict, workspace: Path) -> dict[str, bool]:
         "all_experiments_terminal": bool(statuses)
         and all(s in TERMINAL_EXPERIMENT_STATES for s in statuses),
         "analysis_summary_exists": summary_path.exists() and summary_path.stat().st_size > 0,
+        "analysis_summary_substantive": _summary_substantive(summary_path),
         "figures_generated": figures_dir.exists() and any(figures_dir.iterdir()),
+        "figures_substantive": any(_looks_like_image(f) for f in _figure_files(figures_dir)),
     }
 
 
@@ -117,6 +120,50 @@ def validate_acyclic(tree: dict) -> bool:
             seen.add(cur)
             cur = (nodes.get(cur) or {}).get("parent_id")
     return True
+
+
+# 写作产物实质性校验（审计 P0-3）：击败「两个占位文件骗过 writing 门禁」的伪造。
+# 占位文件（"x" / "fake"）只满足存在性，不满足内容校验。
+_STATS_SIGNATURE = re.compile(
+    r"(效应量|效应大小|effect[ _-]?size|p[ -]?value|置信区间|confidence interval|cohen)",
+    re.IGNORECASE,
+)
+# 真实图像文件的魔法字节（PNG / JPEG / GIF）；SVG 走文本质检。
+_IMAGE_MAGICS: tuple[bytes, ...] = (
+    b"\x89PNG\r\n\x1a\n",
+    b"\xff\xd8\xff",
+    b"GIF8",
+)
+
+
+def _summary_substantive(path: Path) -> bool:
+    """analysis/summary.md 是否为实质性产物：存在、≥200 字节、含统计结论签名。"""
+    if not (path.exists() and path.is_file()):
+        return False
+    if path.stat().st_size < 200:
+        return False
+    text = path.read_text(encoding="utf-8", errors="ignore")
+    return bool(_STATS_SIGNATURE.search(text))
+
+
+def _looks_like_image(path: Path) -> bool:
+    """文件是否为真实图像（魔法字节或 SVG 文本），且非 0 字节占位。"""
+    if not (path.is_file() and path.stat().st_size >= 64):
+        return False
+    head = path.read_bytes()[:8]
+    if any(head.startswith(m) for m in _IMAGE_MAGICS):
+        return True
+    try:
+        head_text = path.read_bytes()[:512].decode("utf-8", "ignore")
+    except Exception:
+        head_text = ""
+    return "<svg" in head_text or "<?xml" in head_text
+
+
+def _figure_files(figures_dir: Path) -> list[Path]:
+    if not figures_dir.is_dir():
+        return []
+    return [f for f in figures_dir.iterdir() if f.is_file()]
 
 
 def _load_schema(name: str) -> dict:

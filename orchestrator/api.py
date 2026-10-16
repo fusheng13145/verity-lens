@@ -18,7 +18,9 @@ import yaml
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
+from orchestrator.failure_loop import apply_decision
 from orchestrator.gates import PHASES, check_gate, compute_facts, load_project
+from orchestrator.doi_metrics import compute_doi_metric, persist_doi_metric
 
 WORKSPACES_ROOT = Path("workspaces")
 
@@ -60,6 +62,12 @@ class Evidence(BaseModel):
     path: str
     locator: str | None = None
     event: str | None = None
+
+
+class DoiVerifyRequest(BaseModel):
+    """DOI 度量触发参数（审计 #10）。online=True 时真联网调 Crossref。"""
+
+    online: bool = False
 
 
 class FailureEntry(BaseModel):
@@ -175,17 +183,49 @@ def get_failure_ledger(project_id: str):
 
 @app.post("/api/projects/{project_id}/failure_ledger")
 def append_failure_entry(project_id: str, entry: FailureEntry):
-    """登记失败条目。HITL 强制：decision.approved_by 不得为空。"""
+    """登记失败条目并驱动回流闭环（审计 P0-4：关闭「直接写 ledger 绕过闭环」通道）。
+
+    改走 ``failure_loop.apply_decision``：校验 → 路由 → 更新实验/假设树 → 追加 ledger →
+    渲染 lessons，使失败被登记后真正回流（假设树更新、级联影响发生）。
+    HITL 强制：``decision.approved_by`` 不得为空（``apply_decision`` 内部强制，未满足返回 400）。
+    """
     ws = _workspace(project_id)
-    ledger_path = ws / "docs" / "failure_ledger.json"
-    ledger = _read_json(ledger_path) or {"entries": []}
     if not entry.decision.approved_by:
         raise HTTPException(
             status_code=400,
             detail="失败登记需人工批准：decision.approved_by 不能为空",
         )
-    ledger.setdefault("entries", []).append(entry.model_dump())
-    ledger_path.write_text(
-        json.dumps(ledger, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
-    )
-    return {"status": "recorded", "entry_id": entry.id}
+    try:
+        result = apply_decision(ws, entry.model_dump())
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    return {
+        "status": "recorded",
+        "entry_id": result["entry_id"],
+        "action": result["action"],
+        "experiment_status": result["experiment_status"],
+        "cascaded_nodes": result.get("cascaded_nodes", []),
+    }
+
+
+# ── DOI 可验证率度量（审计 #10）──────────────────────────────────────
+
+@app.get("/api/projects/{project_id}/doi-metrics")
+def get_doi_metrics(project_id: str):
+    """返回 DOI 可验证率度量（此前持久化的结果；无则现算离线度量，不落盘）。"""
+    ws = _workspace(project_id)
+    stored = _read_json(ws / "docs" / "doi_verification.json")
+    if stored is not None:
+        return stored
+    return compute_doi_metric(ws, online=False)
+
+
+@app.post("/api/projects/{project_id}/doi-metrics")
+def verify_doi_metrics(project_id: str, req: DoiVerifyRequest):
+    """触发一次 DOI 度量并持久化（RESEARCH.yaml + docs/doi_verification.json）。"""
+    ws = _workspace(project_id)
+    if not (ws / "RESEARCH.yaml").exists():
+        raise HTTPException(status_code=400, detail="缺少 RESEARCH.yaml，无法持久化度量")
+    metric = compute_doi_metric(ws, online=req.online)
+    persist_doi_metric(ws / "RESEARCH.yaml", metric)
+    return metric

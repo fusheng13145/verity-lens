@@ -38,7 +38,7 @@
             "category": { "enum": ["EXEC", "DATA", "METH", "HYP", "EPIS"] },
             "code": { "type": "string", "minLength": 1 },
             "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
-            "rationale": { "type": "string" }
+            "rationale": { "type": ["string", "null"] }
           }
         },
         "evidence": {
@@ -108,7 +108,7 @@
             "approved_at": { "type": ["string", "null"] }
           }
         },
-        "lesson": { "type": "string" },
+        "lesson": { "type": ["string", "null"] },
         "tags": { "type": "array", "items": { "type": "string" } }
       }
     }

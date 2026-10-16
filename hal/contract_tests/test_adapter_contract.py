@@ -348,17 +348,38 @@ def test_subagent_context_is_bounded(stub_adapter):
 
 # ── 真实底座实测（存在 dsh 时跑；不触发模型调用）────────────────────
 
-@pytest.mark.skipif(shutil.which("dsh") is None, reason="本机未安装 dsh")
+def _dsh_present() -> bool:
+    """DSH_BIN 环境变量或 PATH 上任一方式可定位底座即可。"""
+    import os
+
+    return bool(os.environ.get("DSH_BIN") or shutil.which("dsh"))
+
+
+@pytest.mark.skipif(not _dsh_present(), reason="本机未安装 dsh（或 DSH_BIN 未设置）")
 def test_real_dsh_version_is_parseable():
     ad = DSHAdapter()
     assert parse_version(ad.installed_version()) > (0, 0, 0)
 
 
-@pytest.mark.skipif(shutil.which("dsh") is None, reason="本机未安装 dsh")
+@pytest.mark.skipif(not _dsh_present(), reason="本机未安装 dsh（或 DSH_BIN 未设置）")
 def test_real_dsh_capabilities_do_not_raise():
     caps = DSHAdapter().capabilities()
     assert set(caps) == set(CAPABILITY_KEYS)
     assert caps["trajectory_fork"] is False  # launcher 无此能力，恒 false
+
+
+@pytest.mark.skipif(not _dsh_present(), reason="本机未安装 dsh（或 DSH_BIN 未设置）")
+def test_real_dsh_session_start_is_handled(tmp_path):
+    """真实底座：start_session 必须返回结构化句柄（无论运行/降级），真触碰底座事件流。
+
+    即便因配额/网络导致运行失败，适配器也应降级为留痕句柄而非抛异常——这是
+    「失败必留痕」硬规则在真实底座上的实证（审计 #8：让 L4 契约测试真触碰底座）。
+    """
+    ad = DSHAdapter()
+    h = ad.start_session("headless", str(tmp_path / "ws"), "verity smoke")
+    assert isinstance(h, SessionHandle)
+    assert h.events  # 至少有 degraded 或 session_start 事件之一
+    assert h.degraded or any(e.get("type") == "session_start" for e in h.events)
 
 
 def test_preset_patch_scopes_do_not_collide(tmp_path):

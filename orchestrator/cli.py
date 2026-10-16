@@ -175,6 +175,7 @@ def cmd_loop(args) -> int:
 
 def cmd_budget(args) -> int:
     """预算硬阻断检查；超限退出码 3，≥70% 告警。"""
+    from orchestrator.budget import evaluate_budget
     from orchestrator.gates import load_project
 
     workspace = Path(args.path)
@@ -184,22 +185,14 @@ def cmd_budget(args) -> int:
         print(f"[ERROR] {exc}")
         return EXIT_ERROR
 
-    budget = project.get("token_budget") or {}
-    total = budget.get("total") or {}
-    cap = float(total.get("cap") or 0)
-    used = float(total.get("used") or 0)
-    ratio = (used / cap) if cap else 0.0
-
-    if cap and used >= cap:
-        print("[HARD_BLOCK] 预算已耗尽，暂停会话；恢复选项：")
-        print("  A. 人工批准追加预算（+20%）")
-        print("  B. 切换廉价模型继续（质量可能下降）")
-        print("  C. 手动介入完成剩余工作")
+    status = evaluate_budget(project)
+    if status.level == "hard":
+        print("[HARD_BLOCK] " + status.message)
         return EXIT_HARD_BLOCK
-    if ratio >= 0.7:
-        print(f"[SOFT_WARNING] 预算使用率 {ratio:.0%}（{used:.0f}/{cap:.0f}）")
+    if status.level == "soft":
+        print(f"[SOFT_WARNING] {status.message}")
         return EXIT_OK
-    print(f"[budget] 使用率 {ratio:.0%}（{used:.0f}/{cap:.0f}），正常")
+    print(f"[budget] {status.message}")
     return EXIT_OK
 
 
@@ -376,6 +369,30 @@ def cmd_finalize(args) -> int:
         return EXIT_OK
     print(f"\n[BLOCKED] 收尾前置条件未满足（{len(report.blockers)} 项），见上方「遗留项」")
     return EXIT_BLOCKED
+
+
+def cmd_verify_dois(args) -> int:
+    """DOI 可验证率度量（审计 #10）：采集 → 校验 → 持久化，接入主流程自度量。
+
+    默认离线（仅格式校验）；``--online`` 时真联网调 Crossref 校验存在性。
+    低验证率不阻断（warning 语义，finalize 报告中展示）；RESEARCH.yaml 缺失退出 1。
+    """
+    from orchestrator.doi_metrics import compute_doi_metric, persist_doi_metric
+
+    workspace = Path(args.path)
+    research_path = workspace / "RESEARCH.yaml"
+    if not research_path.exists():
+        print("[ERROR] 未找到 RESEARCH.yaml；请先 vl init")
+        return EXIT_ERROR
+
+    metric = compute_doi_metric(workspace, online=args.online)
+    print(json.dumps(metric, ensure_ascii=False, indent=2))
+    persist_doi_metric(research_path, metric)
+    print(
+        "[doi] 度量已持久化：RESEARCH.yaml (metrics.doi_verification) "
+        "/ docs/doi_verification.json"
+    )
+    return EXIT_OK
 
 
 def _load_research_safe(workspace: Path) -> dict | None:
@@ -650,6 +667,68 @@ def cmd_rag(args) -> int:
     return EXIT_OK
 
 
+def cmd_run(args) -> int:
+    """启动当前（或指定）阶段 Agent 会话：先跑 pre_session 硬阻断链，再经 HAL 驱动底座。"""
+    from orchestrator.runner import PreSessionBlocked, Runner
+
+    workspace = Path(args.path)
+    try:
+        runner = Runner()
+        result = runner.run(workspace, args.phase)
+    except PreSessionBlocked as exc:
+        print(exc.gate.render())
+        return EXIT_BLOCKED
+    except (FileNotFoundError, ValueError) as exc:
+        print(f"[ERROR] {exc}")
+        return EXIT_ERROR
+
+    handle = result["handle"]
+    print(f"[run] 已启动阶段 {result['phase']} 会话（preset=verity-research）")
+    print(f"[run] 降级模式: {result['degraded']}  session_id={getattr(handle, 'session_id', None)}")
+    for ev in getattr(handle, "events", []) or []:
+        if isinstance(ev, dict) and ev.get("type") == "degraded":
+            print(f"  [DEGRADED] {ev.get('reason')}: {ev.get('detail')}")
+    return EXIT_OK
+
+
+def cmd_advance(args) -> int:
+    """推进状态机：校验下一阶段门禁 → 写 current_phase → 启动该阶段会话。"""
+    from orchestrator.runner import PreSessionBlocked, Runner
+
+    workspace = Path(args.path)
+    try:
+        runner = Runner()
+        result = runner.advance(workspace, start_session=not args.no_start)
+    except PreSessionBlocked as exc:
+        print(exc.gate.render())
+        return EXIT_BLOCKED
+    except (FileNotFoundError, ValueError) as exc:
+        print(f"[ERROR] {exc}")
+        return EXIT_ERROR
+
+    if not result["advanced"]:
+        gate = result.get("gate")
+        print(f"[BLOCKED] 未推进（{result.get('reason')}）")
+        if gate is not None:
+            print(gate.render())
+        if result.get("next") is None:
+            print("下一步：运行 vl finalize 收尾")
+        else:
+            print(f"下一步：满足 {result['next']} 阶段门禁后重新运行 vl advance")
+        return EXIT_BLOCKED
+
+    print(f"[advance] {result['current']} → {result['next']}（current_phase 已更新）")
+    handle = result.get("handle")
+    if handle is not None:
+        print(f"[advance] 已启动 {result['next']} 阶段会话（降级: {result['degraded']}）")
+        for ev in getattr(handle, "events", []) or []:
+            if isinstance(ev, dict) and ev.get("type") == "degraded":
+                print(f"  [DEGRADED] {ev.get('reason')}: {ev.get('detail')}")
+    else:
+        print("[advance] 未启动会话（--no-start）；运行 vl run 手动启动")
+    return EXIT_OK
+
+
 def cmd_sandbox(args) -> int:
     """生成项目专属沙箱 compose（依据 design-blueprint.md §2.8.2）。"""
     from orchestrator.sandbox import (
@@ -768,6 +847,22 @@ def build_parser() -> argparse.ArgumentParser:
     )
     sp.add_argument("--json", action="store_true", help="输出 JSON（供 CI/hook 解析）")
     sp.set_defaults(func=cmd_identity)
+
+    sp = sub.add_parser("run", help="启动当前阶段 Agent 会话（pre_session 硬阻断后）")
+    sp.add_argument("--phase", choices=list(PHASES), default=None,
+                    help="指定阶段（默认当前 current_phase）")
+    sp.add_argument("--path", default=".", help="Workspace 目录")
+    sp.set_defaults(func=cmd_run)
+
+    sp = sub.add_parser("advance", help="校验下一阶段门禁 → 推进 current_phase → 启动会话")
+    sp.add_argument("--no-start", action="store_true", help="只推进状态，不启动底座会话")
+    sp.add_argument("--path", default=".", help="Workspace 目录")
+    sp.set_defaults(func=cmd_advance)
+
+    sp = sub.add_parser("verify-dois", help="DOI 可验证率度量（采集 → 校验 → 持久化，审计 #10）")
+    sp.add_argument("--online", action="store_true", help="真联网调用 Crossref 校验存在性（默认仅格式校验）")
+    sp.add_argument("--path", default=".", help="Workspace 目录")
+    sp.set_defaults(func=cmd_verify_dois)
 
     sp = sub.add_parser("rag", help="文献 RAG 索引与检索（sidecar 接入，Backlog C ①）")
     sp.add_argument("action", choices=["index", "query"])

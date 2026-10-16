@@ -27,8 +27,9 @@ gates:
       - condition: all_experiments_terminal
   writing:
     entry_requires:
-      - condition: analysis_summary_exists
-      - condition: figures_generated
+      # 实质性校验（审计 P0-3）：仅存在性不足以通过，须为真实产物
+      - condition: analysis_summary_substantive
+      - condition: figures_substantive
     hitl_required: true
 
 # 文件路径（或通配）→ 校验用 Schema（位于 orchestrator/schemas/）
