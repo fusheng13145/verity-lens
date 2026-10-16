@@ -21,6 +21,20 @@
 > 复算口径提醒：`verify_with_sidecar` 返回 `skipped` 表示"无可复算数值"，**不等于已验证**；
 > 返回 `mismatch` 表示条目数值对不上，METH/HYP 归因必须先解释差异。
 
+## 2.1 测试目录与 CI 覆盖（交付审计轮更新）
+
+| 目录 | 覆盖 | CI |
+|------|------|-----|
+| `tests/schema` `tests/golden` `hal/contract_tests` `tests/integration` `tests/correctness` | L1/L2/契约/边界保真/L3 | ✅ 主 test job |
+| `tests/api` | Headless API 契约（含失败闭环经 `apply_decision`、DOI 度量端点） | ✅（审计 #7 起纳入） |
+| `tests/finalize` | 收尾闭环（实质产物 + DOI 自度量） | ✅（审计 #7 起纳入） |
+| `tests/sidecar` | 确定性绘图等工具 | ✅（审计 #7 起纳入） |
+| `tests/runner` | 状态机推进 / pre_session 硬阻断链 / 无底座降级留痕 / token 回写 | ✅（审计 #7 起纳入） |
+| `tests/unit` | budget / on_change / reproduce / daemon / doi_metrics | ✅（审计 #7 起纳入） |
+| `hal/contract_tests -k real_dsh` | 真实底座契约（版本/能力/`start_session` 事件流） | 独立 `harness-contract` workflow（有 dsh 即真跑，缺失按 skipif 跳过） |
+
+全量当前 **323 passed / 3 skipped**。CI 工作流：`.github/workflows/ci.yml` + `harness-contract.yml`。
+
 ## 3. 科研 Agent 验收维度总结
 
 | 维度 | 标准 | 自动化 |

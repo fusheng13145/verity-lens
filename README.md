@@ -68,24 +68,31 @@ vl            # 打印全部子命令与用法
 | `vl branch <create\|merge\|status>` | Git 假设分支协作流 | 0/2 |
 | `vl identity [--require {set\|coherent\|signed}]` | 身份解析与可信度分级（VL_USER vs git committer + 提交签名锚点，CI 强制门禁） | 0/1 |
 | `vl rag index <dir\|file>` / `vl rag query --query "..."` | 文献 RAG 索引与检索（持久化 `.verity/rag-index.json`；写入动作接入 opt-in 埋点） | 0 |
+| `vl run --phase <p>` | pre_session 硬阻断链（门禁+预算+失败回流）通过后启动该阶段 Agent 会话；无底座时降级留痕 | 0/2(阻断) |
+| `vl advance [--no-start]` | 校验下一阶段门禁 → 推进 `current_phase` → 启动会话（五阶段流动唯一入口） | 0/2(阻塞) |
+| `vl verify-dois [--online]` | DOI 可验证率度量（采集→校验→持久化；`--online` 真联网 Crossref） | 0/1 |
 
 > 完整契约见 [`docs/interfaces.md`](docs/interfaces.md)。
 
 ### 前端
 
 ```bash
-cd web
-npm install                  # 首次安装（已随脚手架完成）
-npm run dev                  # http://localhost:5173
+make api                     # 后端 Headless API（uvicorn，:8000）
+cd web && npm run dev        # 前端开发服务器（:5173）
 ```
 
-前端在开发期通过 Vite proxy 将 `/api` 转发到后端 `localhost:8000`（Headless API，FastAPI）。
+前端为真实业务界面（React + react-query + Tailwind）：`/` 选择项目 → `/project/<id>` 看板
+——**阶段看板**（5 阶段闸门状态/缺失项/当前阶段高亮）、**HITL 审批**（批准需人工确认的阶段门禁，
+写入 `approvals[phase]`）、**DOI 可验证率卡片**（离线复算 / 联网 Crossref 校验）、
+**失败登记簿**（决策与批准人留痕）。开发期经 Vite proxy 将 `/api` 转发到后端 `:8000`。
 前端规范与 API 契约见 [`docs/frontend.md`](docs/frontend.md)。
 
 ### 运行底座接入
 
 底座（DSH）经 `hal/` 接入；已验证版本与能力集见 `hal/version_lock.yml`。
-升级底座须修改版本锁并过 `make hal-contract-test`（契约测试见 `tests/hal_contract/`）。
+升级底座须修改版本锁并过 `make hal-contract-test`（契约测试见 `hal/contract_tests/`）。
+本机安装底座：`make harness-install`（`npm i -g @deepseek-ai/dsh`，多版本共存用 `DSH_BIN` 环境变量）；
+CI 有独立 `harness-contract` workflow，环境有 dsh 时自动真跑真底座契约，缺失时按 skipif 优雅跳过。
 
 ## 开发约定
 
@@ -96,6 +103,6 @@ npm run dev                  # http://localhost:5173
 
 ## 状态
 
-- 当前阶段：**核心闭环已落地（Phase 0–4g）** —— 文件即状态门禁、失败驱动迭代、学科包化（biomed / materials / compsci 三学科均 **L2**：Preset Patch + MCP 声明 + Golden 用例，`vl bundle load` 一键加载）、容器沙箱、RAG 侧车、制品写锁、Git 协作流、`vl finalize` 收尾闭环；HAL 契约已对齐真实底座 [deepseek-harness](https://github.com/deepseek-ai/deepseek-harness)（本机实测 0.2.0-rc.2；事件流/session 接管已端到端联调）；科研正确性闭环已落地（`power_analysis` + 关键数值确定性复算 + L3 抽检）；敏感数据脱敏工具 `desensitize`（k-匿名 / PHI 屏蔽 / DP 聚合 ε=1.0 / PHI 文本扫描守卫）与长任务提交工具 `hpc_submit`（dry_run/mock/slurm/pbs 可插拔、确定性、规避终端关闭中断）均已落地；并补 L4 集成测试证明 Sidecar 工具的 **stdio/MCP 通道与进程内模块产出逐字段等价**（"关键数值必经确定性工具"在两条调用通道下一致）。详见 [`TODO.md`](TODO.md) 与 [`CHANGELOG.md`](CHANGELOG.md)。
-- 下一步（仅余）：协作模型按真实痛点重评估（蓝图明确"不预设方案"，待 1–10 人团队实际协作反馈）；完整 headless 端到端运行待 deepseek API 配额到位（本机 `QUOTA` 余额不足，外部账户）。底座 ≥0.2 的事件流 / session 接管 / patch schema 联调已于 2026-10-16 用真实 `0.2.0-rc.2` 完成。
+- 当前阶段：**全流程可运行（Phase 0–4 + 交付审计修复完成）** —— 文件即状态门禁、失败驱动迭代、学科包化（biomed / materials / compsci 三学科均 **L2**）、容器沙箱、RAG 侧车、制品写锁、Git 协作流、`vl finalize` 收尾闭环（含 DOI 可验证率自度量）；HAL 契约对齐真实底座 [deepseek-harness](https://github.com/deepseek-ai/deepseek-harness)（本机实测 0.2.0-rc.2）；**状态机 + 会话驱动**（`vl run` / `vl advance`：pre_session 硬阻断链 → 启动 Agent 会话，无底座显式降级留痕）；writing 门禁硬化（占位文件不可伪造）；失败闭环经 API 亦不可绕过；Sidecar 常驻守护进程（NDJSON 行协议）；`make reproduce` 真实可复现比对；前端真实看板 + HITL 审批页。全量测试 **323 passed / 3 skipped**。详见 [`DELIVERY-READINESS-AUDIT.md`](DELIVERY-READINESS-AUDIT.md)、[`TODO.md`](TODO.md) 与 [`CHANGELOG.md`](CHANGELOG.md)。
+- 下一步（仅余外部依赖）：完整 headless 端到端运行待 dsh 底座 + deepseek API 配额到位（CI `harness-contract` 与 `make harness-install` 已就绪，环境具备即真跑）；协作模型最终是否调整待 1–10 人团队真实痛点反馈。
 - 功能范围与成功指标见 [`docs/project-spec.md`](docs/project-spec.md)。

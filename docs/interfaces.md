@@ -73,11 +73,16 @@ class HarnessAdapter(Protocol):
 | `vl bundle new` | `<discipline>` | 生成 L0 Bundle 骨架 | 0/1 |
 | `vl bundle validate` | `<bundle_dir>` | 校验 Bundle 结构合规（L2 追加 preset_patch/mcp/golden_cases 三要素） | 0/2 |
 | `vl bundle load` | `<bundle_dir>` | 加载 Bundle 到运行底座：HAL 注册 Skill / MCP / Preset Patch；能力缺失显式降级并输出 | 0/2 |
-| `vl finalize` | `--path <ws>` | 收尾校验：全实验终态 + 无未处理失败 + analysis/figures 就绪 + 可复现元数据完整度；生成 finalize_report.md | 0(ready)/2(blocked) |
+| `vl finalize` | `--path <ws>` | 收尾校验：全实验终态 + 无未处理失败 + analysis/figures 就绪 + 可复现元数据完整度 + DOI 可验证率度量；生成 finalize_report.md | 0(ready)/2(blocked) |
 | `vl sandbox` | `<project_id>` | 生成/校验容器沙箱 compose | 0/2 |
 | `vl branch` | `<create\|merge\|status>` | Git 假设分支协作 | 0/2 |
+| `vl identity` | `--require {set,coherent,signed}` | 身份解析与可信度检查（CI 门禁） | 0/2 |
+| `vl rag` | `<index\|query>` | 文献 RAG 索引/检索（索引落盘 `.verity/rag-index.json`） | 0/1 |
+| `vl run` | `--phase <p>` | pre_session 硬阻断链（门禁+预算+失败回流）通过后启动该阶段 Agent 会话；无底座时降级留痕 `harness_unavailable` | 0/2(阻断) |
+| `vl advance` | `--no-start` | 校验下一阶段门禁 → 推进 `current_phase` → 启动会话 | 0/2(阻塞) |
+| `vl verify-dois` | `--online` | DOI 可验证率度量：采集（RAG 索引/假设树/`cited_dois`）→ 校验 → 持久化（RESEARCH.yaml `metrics.doi_verification` + `docs/doi_verification.json`） | 0/1 |
 
-实现状态：Phase 0 实现 `init` / `gate`；Phase 1 实现 `loop` / `budget`；Phase 2 实现 `bundle`（工厂 + 校验）；Phase 3 实现 `lock` / `sandbox` / `branch`；Phase 4a 实现 `finalize`（真实收尾闭环，含可复现元数据校验）；Phase 4c 实现 `bundle load`（bundle.yml → HAL 注册，能力缺失显式降级）。
+实现状态：Phase 0 实现 `init` / `gate`；Phase 1 实现 `loop` / `budget`；Phase 2 实现 `bundle`（工厂 + 校验）；Phase 3 实现 `lock` / `sandbox` / `branch`；Phase 4a 实现 `finalize`（真实收尾闭环）；Phase 4c 实现 `bundle load`；Phase 4l 实现 `rag`；Phase 4j 实现 `identity`。状态机与会话驱动（`orchestrator/runner.py`）实现 `run` / `advance`：`vl advance` 是五阶段流动的唯一入口，`pre_session` 聚合门禁 + 预算 + 失败回流为硬阻断链。`verify-dois` 为 DOI 可验证率度量入口（系统自度量「≥95% DOI 可验证」）。
 
 ## 2.1 Headless API 契约（供 Web 前端）
 
@@ -91,7 +96,9 @@ class HarnessAdapter(Protocol):
 | GET | `/api/projects/{project_id}/hypothesis_tree` | 假设树（含 refuted/revised + provenance 证据链） |
 | GET | `/api/projects/{project_id}/experiments` | 实验列表与状态 |
 | GET | `/api/projects/{project_id}/failure_ledger` | 查看失败登记簿 |
-| POST | `/api/projects/{project_id}/failure_ledger` | 登记失败条目（HITL 强制：`decision.approved_by` 非空） |
+| POST | `/api/projects/{project_id}/failure_ledger` | 登记失败条目并驱动回流闭环（经 `failure_loop.apply_decision`：校验 → 路由 → 更新实验/假设树 → 追加 ledger → 渲染 lessons；HITL 强制：`decision.approved_by` 非空，违反返回 400） |
+| GET | `/api/projects/{project_id}/doi-metrics` | DOI 可验证率度量（读取持久化结果；无则现算离线度量，不落盘） |
+| POST | `/api/projects/{project_id}/doi-metrics` | 触发度量并持久化（body `{online: bool}`；`online=true` 真联网 Crossref） |
 
 类型契约以 `orchestrator/schemas/*.json` 为单一真相；前端 `src/types/` 由其生成。
 
@@ -109,18 +116,25 @@ class HarnessAdapter(Protocol):
 - `desensitize`（✅ Phase 4f）：敏感数据脱敏 + PHI 扫描守卫，四种 mode：`field_mask`（hash 令牌/redact/generalize）、
   `k_anonymity`（QI 抑制至 ≥k）、`dp_aggregate`（Laplace，ε=1.0，seed 可复现）、`scan_text`（E10 prompt 守卫）。
 - `hpc_submit`（✅ Phase 4g）：长任务远程提交 + 状态轮询 → 输出 `{job_id, state, status_endpoint}`；可插拔 backend（`dry_run` 默认 / `mock` / `slurm` / `pbs`），`dry_run`/`mock` 确定性、不实际执行，规避终端关闭中断（E13）；`slurm`/`pbs` best-effort 调用并显式降级。
+- `plot`（✅ 交付审计轮）：确定性零依赖 SVG 图表（bar / line），`render(csv_path, out_path, *, kind, title)`；相同输入逐字节一致，产物可被 writing 门禁 `_looks_like_image` 识别（供 `figures_substantive` 与 `scripts/reproduce.py` 复现比对）。
 
 ## 4. MCP Server 契约
 
 - 标准 MCP 协议；Bundle 侧声明在各 `bundles/<discipline>/bundle.yml` 的 `mcp.servers`（name / transport / command / tools），由 `vl bundle load` 经 HAL `declare_mcp_servers` 注册。
 - sidecar 确定性工具提供 stdio 入口：`python -m sidecar.tools.<tool>`（stdin JSON 参数 → stdout JSON 结果，见 `sidecar/tools/_stdio.py`），使 MCP 声明可执行而非纸面配置。
+- **常驻守护进程**（✅ 交付审计轮）：`python -m sidecar.daemon`（`sidecar/daemon.py`）——单进程长驻处理多工具调用，NDJSON 行协议（与 MCP stdio 传输同构）：
+  - 启动输出 `{"type":"ready","tools":[...],"protocol":"ndjson-line"}`；
+  - 请求 `{"id":<any>,"tool":"plot","params":{...}}` → 响应 `{"id","ok":true,"result":{...}}` 或 `{"id","ok":false,"error":"..."}`；
+  - `{"type":"shutdown"}` 或 stdin EOF 优雅退出；SIGTERM/SIGINT 优雅退出；单行错误隔离不崩进程；
+  - 工具注册表 `sidecar/tools/_registry.py`（新增工具登记一处即可）。需要复用导入/降低冷启动时以 daemon 替代每调用一进程的一次性 `_stdio.serve`（后者保留向后兼容）。
 - 适用：需长期运行、多客户端、标准协议的外部服务（OpenAlex/PubMed、HPC 状态）。
 - 注册经 HAL `declare_mcp_servers`。
 
 ## 5. 数据契约（声明式文件）
 
 所有文件 schema 见 `data-schema.md` 与 `orchestrator/schemas/`。核心契约：
-- `RESEARCH.yaml`：项目唯一元数据真相源。
+- `RESEARCH.yaml`：项目唯一元数据真相源；`metrics.doi_verification`（✅ 交付审计轮）为 DOI 可验证率度量（`{total, valid_format, verified, verification_rate, online, checked_at}`，`vl verify-dois` / `vl finalize` / API POST 写入）。
+- `docs/doi_verification.json`（✅ 交付审计轮）：同一度量的 JSON 落盘（前端看板 DoiCard 数据源）。
 - `hypothesis_tree.json`：假设节点 `parent_id` 不得成环。
-- `failure_ledger.json`：每条 failed 实验必关联 entry；refuted 节点必附 `justified_by`。
+- `failure_ledger.json`：每条 failed 实验必关联 entry；refuted 节点必附 `justified_by`；API 直写通道已关闭（必经 `apply_decision` 回流闭环）。
 - `experiments/exp_NNN.yaml`：终态集合 `{completed, concluded_failed, suspended, abandoned}`，`failed` 为临时态。

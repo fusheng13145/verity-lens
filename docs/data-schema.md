@@ -34,7 +34,21 @@ token_budget:
   total:      { cap: 500000, used: 42300 }
   per_phase:  { literature:{cap:100000,used:42300}, question:{cap:50000,used:0},
                 experiment:{cap:200000,used:0}, analysis:{cap:100000,used:0}, writing:{cap:50000,used:0} }
+metrics:                                  # 系统自度量（交付审计轮新增，可选）
+  doi_verification:                       # 由 vl verify-dois / vl finalize / API POST 写入
+    total: 12
+    valid_format: 12
+    verified: 12                          # 仅 online=true 时非零（Crossref 存在性）
+    verification_rate: 1.0                # 目标 ≥0.95（project-spec.md）
+    online: false
+    checked_at: "2026-10-16T12:00:00+00:00"
 ```
+
+**`metrics.doi_verification`（交付审计轮新增，可选）**：DOI 可验证率度量——离线模式
+`verification_rate = valid_format / total`（仅格式校验）；联网模式为 Crossref 存在性真校验。
+同一度量另落盘 `docs/doi_verification.json`（前端 DoiCard 数据源）。采集来源：
+`.verity/rag-index.json` 分片 `metadata.doi`、`hypothesis_tree.json` / `failure_ledger.json`
+中的 `doi` 字段、RESEARCH.yaml `cited_dois`（归一化去重）。
 
 ## 3. hypothesis_tree.json（扩展字段）
 

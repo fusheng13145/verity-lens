@@ -12,18 +12,19 @@
 | 样式 | tailwindcss（轻量，不引入重组件库） |
 | 状态 | react-query 服务端状态 + 局部 Context（UI 状态） |
 
-## 2. 目录结构
+## 2. 目录结构（已实现，交付审计轮）
 
 ```
 web/
 ├── src/
-│   ├── pages/        # Dashboard / PhaseGate / FailureLedger / HypothesisTree / Experiments
-│   ├── components/   # 通用组件（缺失清单卡、审批四要素卡、状态徽标）
-│   ├── api/          # axios 实例 + 端点封装（仅调 Headless API）
-│   ├── types/        # TS 类型（由 orchestrator/schemas/*.json 生成，禁止手写漂移）
-│   └── store/        # react-query hooks
-├── vite.config.ts    # dev proxy /api → http://localhost:8000
-└── tailwind.config.js
+│   ├── pages/        # Dashboard（项目看板：阶段/HITL/DOI/失败登记簿）
+│   ├── components/   # PhasePipeline / HitlPanel / DoiCard / FailureLedger
+│   ├── api.ts        # axios 实例 + 端点封装（仅调 Headless API）
+│   ├── types.ts      # TS 类型（与 Headless API 返回结构对应）
+│   ├── App.tsx       # QueryClientProvider + react-router（/ 项目选择 → /project/:id 看板）
+│   └── main.tsx
+├── vite.config.ts    # dev proxy /api → http://localhost:8000（Tailwind v4 经 @tailwindcss/vite 插件）
+└── package.json
 ```
 
 ## 3. 与后端契约（Headless API）
@@ -37,16 +38,21 @@ web/
 | POST | `/api/projects/{id}/approve_phase` | HITL 审批（写 approvals + Git commit） |
 | GET | `/api/projects/{id}/hypothesis_tree` | 假设树（含 refuted/revised + 证据链） |
 | GET | `/api/projects/{id}/experiments` | 实验列表与状态 |
-| GET/POST | `/api/projects/{id}/failure_ledger` | 查看 / 登记失败（POST 须经 HITL） |
+| GET/POST | `/api/projects/{id}/failure_ledger` | 查看 / 登记失败（POST 经 `apply_decision` 回流闭环，HITL 强制） |
+| GET/POST | `/api/projects/{id}/doi-metrics` | DOI 可验证率度量（POST 触发度量并持久化，`{online}` 可选真联网） |
 
 类型契约以 `orchestrator/schemas/*.json` 为单一真相；前端用 `openapi-typescript` 或脚本由后端 OpenAPI 生成 `src/types/`。
 
-## 4. 关键交互
+## 4. 关键交互（实现状态：交付审计轮已落地核心三页）
 
-- **阶段看板**：展示 `current_phase` + 门禁通过项 / 阻塞项，沿用 `interaction-design.md` §1 的三段式缺失清单格式。
-- **HITL 审批页**：必须呈现四要素（产出摘要含证据引用 / 下一阶段准入条件 / 风险提示含预算使用率与未终态实验数 / 明确确认动作），禁止无上下文"是否继续"。
-- **失败登记簿页**：按 `failure_ledger` 渲染，支持按失败分类（EXEC/DATA/METH/HYP/EPIS）筛选，展示 evidence 指针与 lessons。
-- **降级/阻断透传**：API 返回的结构化字段（`degraded_features` / `budget_blocked` / `low_confidence`）按 `interaction-design.md` §3 统一呈现，数值结论标注来源工具。
+- **阶段看板** ✅（`PhasePipeline`）：展示 `current_phase` + 各阶段闸门状态（通过 / 待 HITL / 未就绪 + 缺失清单）。
+- **HITL 审批** ✅（`HitlPanel`）：需人工审批的阶段门禁批准动作（写入 `approvals[phase]`）。
+  四要素完整卡片（产出摘要含证据引用 / 风险提示含预算使用率）可按 `interaction-design.md` §2 后续增强。
+- **失败登记簿** ✅（`FailureLedger`，只读）：渲染条目（分类徽标 EXEC/DATA/METH/HYP/EPIS、
+  决策与批准人、lessons）；按分类筛选可后续增强。
+- **DOI 可验证率** ✅（`DoiCard`）：可验证率进度条 + 离线复算 / 联网 Crossref 校验按钮（≥95% 目标）。
+- **降级/阻断透传**：API 返回的结构化字段（`degraded_features` / `budget_blocked` / `low_confidence`）
+  按 `interaction-design.md` §3 统一呈现，数值结论标注来源工具（后续增强）。
 
 ## 5. 构建与联调
 

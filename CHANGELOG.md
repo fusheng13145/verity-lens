@@ -2,6 +2,63 @@
 
 > 遵循 Keep a Changelog 风格，版本号 `MAJOR.MINOR.PATCH`。
 
+## [1.14.0] - 2026-10-16 — 交付审计修复：P0 接线 + 次级缺陷全部清零
+
+> 依据 `DELIVERY-READINESS-AUDIT.md`（2026-10-16）完成三轮修复；审计结论从
+> 「内部三层接线缺失，约 45/100」推进到「唯一剩余 = 外部依赖（dsh 底座 + deepseek API 配额）」。
+> 全量测试 **323 passed / 3 skipped**（原 279），无回归。
+
+### Added
+- **状态机与会话驱动**：`orchestrator/runner.py`（`Runner`：`pre_session` 硬阻断链 =
+  阶段门禁 + 预算 + 失败回流；`start_phase_session` 经 HAL 真正驱动底座，无底座显式降级留痕
+  `harness_unavailable`；`advance` 校验下一阶段门禁 → 推进 `current_phase` → 启动会话）。
+  CLI 新增 `vl run --phase <p>` / `vl advance [--no-start]`——五阶段从静态规则表变为可流动状态机。
+- **Sidecar 常驻守护进程**（审计 #6）：`sidecar/daemon.py`（NDJSON 行协议：就绪握手 →
+  多工具复用 → shutdown/EOF/SIGTERM 优雅退出，单行错误隔离）+ `sidecar/tools/_registry.py`
+  （六工具注册表）；协议与 MCP stdio 传输同构，可作 DSH 常驻 StdioConfig server。
+  原 `_stdio.serve` 一次性入口保留向后兼容。
+- **DOI 可验证率自度量**（审计 #10）：`orchestrator/doi_metrics.py`（采集 RAG 索引 /
+  假设树 / `cited_dois` → 离线格式校验或 `--online` 真联网 Crossref → 聚合可验证率 →
+  持久化 RESEARCH.yaml `metrics.doi_verification` + `docs/doi_verification.json`）；
+  接入 `vl finalize` 主流程（报告新增「DOI 可验证率」章节，<95% 目标出 warning）；
+  CLI 新增 `vl verify-dois [--online]`；API 新增 `GET/POST /api/projects/{id}/doi-metrics`。
+- **前端真实业务界面**（审计 #9）：完整重写 `web/src`——阶段看板（5 阶段闸门/缺失项/当前阶段
+  高亮）、HITL 审批面板、DOI 可验证率卡片（离线复算/联网校验）、失败登记簿展示；
+  `api.ts` 类型化客户端（axios + react-query）+ react-router 路由。`npm run build` + oxlint 全过。
+- **真实底座 CI 契约**（审计 #8）：新增 `.github/workflows/harness-contract.yml`
+  （尽力安装 dsh → `-k real_dsh` 真跑 → 离线契约兜底保绿）；`test_real_dsh_*` skip 条件识别
+  `DSH_BIN` 并新增 `test_real_dsh_session_start_is_handled` 真驱动 `start_session`；
+  Makefile 新增 `harness-install`。
+- **失败回流自动触发**（审计 #4）：`orchestrator/hooks/on_change.py`（监听 `experiments/` 与
+  `docs/` 变更自动触发 `vl loop`；`--once` / 纯 stdlib 轮询常驻两模式）。
+- **可复现性验证**（审计 #11）：`scripts/reproduce.py`（复用 `plot.py` 确定性绘图 +
+  SHA-256 基线比对，consistent/DRIFT，漂移退出 1）；Makefile `reproduce` 从 echo 占位改写为真实实现。
+- **确定性绘图工具**：`sidecar/tools/plot.py`（纯 stdlib SVG bar/line，相同输入逐字节一致）。
+- 新增测试：`tests/runner/`（状态机/硬阻断/降级）、`tests/unit/`（budget / on_change /
+  reproduce / daemon / doi_metrics）、`tests/sidecar/test_plot.py`、`tests/api` 回流闭环 +
+  DOI 度量用例。
+
+### Changed
+- **writing 门禁硬化**（审计 P0-3）：由「存在性」升级为「内容实质性」——
+  `analysis_summary_substantive`（≥200 字节 + 统计签名正则）、`figures_substantive`
+  （真实图片魔法字节/SVG + ≥64 字节）；占位文件（`echo x` / `fake.png`）现被 BLOCKED；
+  `vl finalize` 同步改用实质性事实。
+- **预算语义收敛**（审计 #3）：预算硬阻断逻辑抽为 `orchestrator/budget.py`
+  （`evaluate_budget` 纯函数），`vl budget` 与 `runner._budget_exhausted` 复用；
+  会话结束后 token 用量回写 `token_budget.total.used`（审计 #2 部分缓解）。
+- **CI 补漏**（审计 #7）：test job 纳入 `tests/api tests/finalize tests/sidecar tests/unit`
+  （原漏跑 68 例）。
+- 文档同步：`docs/interfaces.md`（CLI/API/Sidecar daemon/数据契约）、`docs/modules.md`、
+  `README.md`（命令一览/前端/底座接入/状态）。
+
+### Fixed
+- **P0-1/P0-2/P0-4 三层接线缺失**：Agent 会话驱动、阶段推进入口、API 失败闭环
+  （`POST /failure_ledger` 改经 `failure_loop.apply_decision`，关闭直写 ledger 绕过闭环通道）。
+- **`vl` 入口静默失效**（审计 #1）：editable finder stale 路径改回本仓库 + 补装 setuptools
+  + `pip install -e .` 重建 console launcher；`vl --help/gate/run/advance` 实测全部正常。
+- `failure_ledger.schema.json` 放宽 `classification.rationale` / `lesson` 允许 null
+  （对齐 API pydantic 模型默认值）。
+
 ## [1.13.8] - 2026-10-16 — 季度切换演练自动化 + 首跑抓到 dsh 版本遮蔽（Backlog C ②）
 
 ### Added

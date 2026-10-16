@@ -12,11 +12,11 @@
 - **可测试性**：单测覆盖率 100%；`contract_tests/` 锁定每个接口行为 + 降级路径。
 
 ## 2. Orchestrator Lite（编排内核）`orchestrator/`
-- **职责**：无状态事件处理器，提供阶段门禁、失败回流、预算硬阻断。
-- **公开接口**：CLI `vl init/gate/loop/budget/lock/bundle/finalize`；纯函数 `gates.py`；`failure_loop.py`（预算检查在 `cli.py:cmd_budget`，未独立成模块）。
-- **依赖**：`hal`（注册接口）、Workspace 文件（真相源）、Sidecar 工具（归因复核）。
+- **职责**：无状态事件处理器，提供阶段门禁、失败回流、预算硬阻断、状态机推进与会话驱动、DOI 可验证率度量。
+- **公开接口**：CLI `vl init/gate/loop/budget/lock/bundle/finalize/identity/rag/run/advance/verify-dois`；纯函数 `gates.py`（规则来自 `gates.rules.yaml`）；`runner.py`（`Runner`：`pre_session` 硬阻断链 = 门禁+预算+失败回流，`start_phase_session` 经 HAL 驱动底座，`advance` 推进 `current_phase`）；`budget.py`（`evaluate_budget` 纯函数，CLI 与 runner 共用的单一预算语义来源）；`doi_metrics.py`（DOI 可验证率采集/校验/聚合/持久化）；`hooks/on_change.py`（文件变更监听自动触发 `vl loop` 回流检查，`--once`/常驻轮询两模式）。
+- **依赖**：`hal`（仅 `bundle_loader.py` 与 `runner.py` 两处，依赖收敛纪律的显式例外）、Workspace 文件（真相源）、Sidecar 工具（归因复核与 DOI 校验）。
 - **耦合边界**：不持有状态、不建数据库；规则来自 `gates.rules.yaml`（声明式，专家可改）。
-- **可测试性**：门禁为纯函数，可直接单测；Golden 轨迹回归覆盖端到端。
+- **可测试性**：门禁为纯函数，可直接单测；Golden 轨迹回归覆盖端到端；`tests/runner/` 覆盖状态机/硬阻断/降级留痕，`tests/unit/` 覆盖 budget / on_change / doi_metrics。
 
 ## 3. 失败驱动迭代模块（Failure Loop，属编排层）`orchestrator/failure_loop.py`
 - **职责**：扫描 failed 实验，强制归因登记与分类路由，驱动假设树迭代。
@@ -32,7 +32,7 @@
 
 ## 5. 侧车层（Sidecar）`sidecar/`
 - **职责**：确定性计算与外部对接（RAG/DOI/统计/功效/图表/脱敏/HPC）。
-- **公开接口**：注册为底座 tool 或 MCP Server；见 `tool-calling.md`。
+- **公开接口**：注册为底座 tool 或 MCP Server（见 `tool-calling.md`）；每工具 stdio 一次性入口 `python -m sidecar.tools.<tool>`；**常驻守护进程** `python -m sidecar.daemon`（NDJSON 行协议单进程多工具，见 `interfaces.md` §4；工具注册表 `sidecar/tools/_registry.py`）。
 - **依赖**：经 HAL `register_tools` / `declare_mcp_servers` 注册；不感知底座内部。
 - **耦合边界**：纯函数/常驻进程，资源隔离，无 AI 推断。
 
