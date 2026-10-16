@@ -44,7 +44,9 @@
 - [x] **季度切换演练**（2026-10-16 落地，见 CHANGELOG 1.13.8）：`python scripts/base-switch-drill.py`（或 `make base-switch-drill`）四项检查（接口符合性 / 耦合预算 / 替换模拟 / 版本漂移）+ 契约回归；季度执行或每次升级 deepseek-harness 后执行。**首跑即发现本机旧全局 dsh 遮蔽新版**（已支持 `DSH_BIN` 覆盖；机器侧清理旧全局安装待用户决定，见 version_lock.yml known_differences）。
 
 ### C2. 本机环境待办（非项目缺陷）
-- [ ] **旧全局 dsh 遮蔽**：`D:\Node.js\dsh`（0.1.5-rc.2）在 PATH 中先于用户级 `.npm-global`（0.2.0-rc.2）。二选一：① 卸载旧全局安装（`npm uninstall -g @deepseek-ai/dsh`，注意旧 prefix 权限）；② 系统环境变量设 `DSH_BIN=C:\Users\ASUS\.npm-global\dsh.cmd`（DSHAdapter 已支持）。未处理前演练会报版本漂移 FAIL（这正是演练的职责）。
+- [ ] **旧全局 dsh 清理（仅剩一步：管理员删除）**：`D:\Node.js` 下的 dsh@0.1.5-rc.2 因 OS 权限（EPERM）与主机 safe-delete 保护无法在本环境删除，须在**管理员 PowerShell** 执行一次：
+  `Remove-Item -Recurse -Force "D:\Node.js\node_modules\@deepseek-ai"; Remove-Item -Force "D:\Node.js\dsh","D:\Node.js\dsh.cmd","D:\Node.js\dsh.ps1"`
+  配套已完成（2026-10-16）：npm 全局 prefix 已对齐用户目录 `C:\Users\ASUS\.npm-global`（未来 `npm i -g` 不再需要管理员，根除 EPERM 复发）；`.npm-global` 已追加到用户级 PATH。删除后重开终端，`dsh --version` 应输出 0.2.0-rc.2，季度演练的版本漂移 FAIL 随之消除。
 
 ---
 
