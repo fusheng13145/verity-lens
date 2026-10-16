@@ -12,10 +12,12 @@
 """
 from __future__ import annotations
 
+import json
 import math
 import re
 from collections import OrderedDict
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Callable, Iterable, Sequence
 
 # ── 默认配置（来源 blueprint §2.7.1）─────────────────────────────────────
@@ -39,6 +41,11 @@ CONFIG = {
         "auto_archive": {"trigger": "项目 > 3 个月未活动", "restore": "用户明确引用时按需拉回"}
     },
 }
+
+# 离线默认 hash 嵌入器的余弦相似度量级显著低于真实稠密嵌入（依 token 重叠约 0.5~0.85），
+# 蓝图阈值 0.72 面向真实嵌入模型；离线路径（无外部依赖、确定性）用此放宽阈值保证检索可用。
+# 接入真实嵌入模型后，调用方应改回 CONFIG 的 0.72（或经 CLI --min-score 显式指定）。
+OFFLINE_SCORE_THRESHOLD = 0.05
 
 _TOKEN_RE = re.compile(r"\w+", re.UNICODE)
 _CJK_RE = re.compile(r"[一-鿿]")
@@ -353,6 +360,57 @@ class LiteratureRAG:
         return RetrievalResult(
             mode="full", chunks=chunks, citations=citations, tokens_used=total, warning=warning
         )
+
+
+def save_index(index: "LiteratureIndex", path: Path) -> None:
+    """持久化索引到 JSON（含预计算向量）。
+
+    仅依赖标准库；向量与分片一并落盘，重建时无需重算（默认 hash 嵌入器确定性，
+    查询时按相同方式重算即可）。用于编排层 CLI（``vl rag``）跨进程共享同一份索引。
+    """
+    payload = {
+        "schema_version": 1,
+        "vector_dim": index._dim,
+        "embedder": "default_hash",
+        "chunks": [
+            {
+                "chunk_id": c.chunk_id,
+                "text": c.text,
+                "metadata": c.metadata,
+                "vector": c.vector,
+                "archived": c.archived,
+            }
+            for c in index._chunks
+        ],
+    }
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+
+
+def load_index(path: Path, *, write_observer: Callable[[str, dict], None] | None = None) -> "LiteratureIndex | None":
+    """从 JSON 重建索引；文件不存在 / 损坏 / 为空时返回 ``None``。
+
+    重建后复用默认 hash 嵌入器（与落盘向量同构），查询重算与写入保持一致。
+    ``write_observer`` 透传给 ``LiteratureIndex``，使后续 ``add`` / ``archive`` 仍可触发观测。
+    """
+    if not path.exists():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError, UnicodeDecodeError):
+        return None
+    dim = data.get("vector_dim", 256)
+    idx = LiteratureIndex(vector_dim=dim, write_observer=write_observer)
+    for c in data.get("chunks", []):
+        chunk = Chunk(
+            chunk_id=c.get("chunk_id", ""),
+            text=c.get("text", ""),
+            metadata=c.get("metadata", {}),
+            vector=c.get("vector", []),
+            archived=c.get("archived", False),
+        )
+        idx._chunks.append(chunk)
+    return idx
 
 
 def retrieve(query: str) -> list:

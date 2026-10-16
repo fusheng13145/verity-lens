@@ -66,6 +66,8 @@ vl            # 打印全部子命令与用法
 | `vl finalize --path <ws>` | 收尾校验 + 生成 finalize_report.md（含 AI 贡献声明草稿） | 0(ready)/2(blocked) |
 | `vl sandbox <project_id>` | 生成/校验容器沙箱 compose | 0/2 |
 | `vl branch <create\|merge\|status>` | Git 假设分支协作流 | 0/2 |
+| `vl identity [--require {set\|coherent\|signed}]` | 身份解析与可信度分级（VL_USER vs git committer + 提交签名锚点，CI 强制门禁） | 0/1 |
+| `vl rag index <dir\|file>` / `vl rag query --query "..."` | 文献 RAG 索引与检索（持久化 `.verity/rag-index.json`；写入动作接入 opt-in 埋点） | 0 |
 
 > 完整契约见 [`docs/interfaces.md`](docs/interfaces.md)。
 

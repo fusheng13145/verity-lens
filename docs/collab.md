@@ -128,7 +128,7 @@ fi
 | merge 冲突次数 | 并行写作/实验的真实冲突 | Git 日志 | 分支流 |
 | 身份误配 | `VL_USER` 与 git committer 不一致 | ✅ opt-in 埋点已落地（`identity_mismatch`） | 身份 |
 | 共享会话/同文件并发请求 | 团队是否真的需要非目标能力 | 人工访谈 / 使用日志 | 非目标项 |
-| RAG 并发写入冲突 | 共享文献库一致性问题 | 🟡 opt-in 能力就绪（`rag_index_write`，待编排层接线） | RAG |
+| RAG 并发写入冲突 | 共享文献库一致性问题 | ✅ opt-in 已接线（`rag_index_write`，`vl rag index` 触发） | RAG |
 
 > 埋点为 **opt-in**：默认关闭，仅当团队同意观测时开启，避免把"协作监控"强加给单人用户（实现见 §7.7，默认零副作用）。
 
@@ -163,13 +163,18 @@ fi
   - `identity_mismatch`（**2026-10-16 落地**）：merge 成功时比对 `VL_USER` 与 git committer
     （`git config user.name/email`），`payload` 含 `vl_user` / `git_user` / `git_email` / `match` / `context`。
     这是 §7.2 gap②「身份弱约定」的**精确**检测（不再只是锁 holder 的一阶代理）。
-  - `rag_index_write`（**2026-10-16 落地，能力就绪**）：RAG 共享索引的写入动作
+  - `rag_index_write`（**2026-10-16 落地，已接线**）：RAG 共享索引的写入动作
     （`op` ∈ `add` / `archive`，含分片数 / doi）。由编排层在实例化 `LiteratureIndex` / `LiteratureRAG`
     时注入 `rag_write_observer(workspace)` 回调触发（见下「RAG 接线」）。
 - 身份检测：锁 `holder` vs `vl_user` 仍作「冒充」一阶代理；`identity_mismatch` 是 git committer 层面的精确比对。
-- **RAG 接线说明**：`sidecar/rag` 当前为纯内存索引且尚未被编排层 CLI 采用，故 `rag_index_write` 事件
-  需编排层在实例化 RAG 时传入 `write_observer=rag_write_observer(workspace)` 才会产生。
-  埋点能力已就绪且单测覆盖（`add` / `archive` 触发）；待 RAG 接入编排层即自动生效。
+- **RAG 接线（2026-10-16 完成，Backlog C ①）**：`vl rag index <dir|file>` / `vl rag query --query "..."`
+  已接入编排 CLI（`orchestrator/cli.py` `cmd_rag`）。索引持久化到 `<workspace>/.verity/rag-index.json`
+  （`literature_rag.save_index` / `load_index`，跨进程共享，按 chunk_id 去重防重复索引膨胀）；
+  `index` 实例化 `LiteratureIndex` 时传入 `write_observer=rag_write_observer(workspace)`，
+  opt-in 开启即自动产生 `rag_index_write` 事件，关闭则零副作用（审计文件不创建）。
+  检索（`query`）不触发写入事件。离线默认 hash 嵌入器相似度量级低于真实稠密嵌入，
+  查询阈值默认放宽为 `OFFLINE_SCORE_THRESHOLD`（0.05），`--min-score` 可显式覆盖
+  （接入真实嵌入模型后建议显式指定蓝图阈值 0.72）。
 - **尚未覆盖**（7.3 中唯一剩余）：「共享会话 / 同文件并发」需求访谈（硬缺口，需真实团队反馈才启动设计）。
 
 ### 7.8 身份可信化（P0 已落地，2026-10-16）

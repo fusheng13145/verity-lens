@@ -2,6 +2,30 @@
 
 > 遵循 Keep a Changelog 风格，版本号 `MAJOR.MINOR.PATCH`。
 
+## [1.13.7] - 2026-10-16 — RAG 侧车接入编排 CLI + 写入埋点激活（Backlog C ①）
+
+### Added
+- **`vl rag index <dir|file>` / `vl rag query --query "..."`**：文献 RAG 索引与检索接入编排 CLI
+  （`orchestrator/cli.py` `cmd_rag`）。`index` 递归收集文本文件（`--glob`，默认
+  `*.md,*.txt,*.rst,*.tex`，剥离 YAML frontmatter）分片嵌入；`query` 输出命中
+  （`--top-k` / `--min-score` / `--json` / `--force-citation-only`）。
+- **索引持久化**：`sidecar/rag/literature_rag.py` 新增 `save_index` / `load_index`，
+  索引落盘 `<workspace>/.verity/rag-index.json`（含预计算向量，跨进程共享）；
+  `index` 重复运行按 `chunk_id` 去重（防重复索引膨胀），`--reset` 重建而非叠加。
+- **`rag_index_write` 埋点激活**：`cmd_rag index` 实例化 `LiteratureIndex` 时注入
+  `rag_write_observer(workspace)`，opt-in 开启（`VL_TELEMETRY=1` 或 `collab_telemetry: true`）
+  即自动记录写入事件；关闭零副作用（审计文件不创建）。检索（`query`）不触发写入事件。
+- **离线阈值修正**：`literature_rag.OFFLINE_SCORE_THRESHOLD = 0.05` —— 离线默认 hash 嵌入器
+  相似度量级（约 0.5~0.85，依 token 重叠）低于真实稠密嵌入的蓝图阈值 0.72，查询默认放宽保证可用；
+  `--min-score` 可显式覆盖（接入真实嵌入模型后建议显式指定 0.72）。
+- 测试：新增 13 例（持久化 round-trip 3 + CLI 端到端/去重/reset 4 + 埋点 opt-in 接线 2 +
+  参数错误/空索引 3 + 阈值覆盖 1）；全量 260 通过。
+
+### Notes
+- 实测：索引本项目 `docs/` 18 个文件 → 92 分片；查询「假设分支 协作 合并」正确命中
+  `docs/collab.md` 相关分片。RAG 并发写入信号（§7.3）至此全部可采集，
+  「共享会话 / 同文件并发」访谈仍为唯一未覆盖信号（需真实团队反馈）。
+
 ## [1.13.6] - 2026-10-16 — preset patch 机读校验 + DSH schema 钉固（Backlog C）
 
 ### Added

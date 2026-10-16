@@ -7,6 +7,7 @@ Phase 2：bundle（工厂 + 校验）
 Phase 3：lock / sandbox / branch
 Phase 4：finalize（真实收尾闭环，含可复现元数据校验）
 Phase 4c：bundle load（bundle.yml → HAL 注册，能力缺失显式降级）
+Phase 4l：rag（文献 RAG 索引/检索接入编排 CLI，激活 rag_index_write 观测）
 """
 from __future__ import annotations
 
@@ -492,6 +493,163 @@ def cmd_identity(args) -> int:
     return EXIT_OK
 
 
+def _collect_rag_files(source: Path, patterns: list[str]) -> list[Path]:
+    """递归收集匹配的文本文件；``source`` 为文件时直接返回该文件。"""
+    if source.is_file():
+        return [source]
+    if not source.is_dir():
+        return []
+    out: list[Path] = []
+    for pat in patterns:
+        out.extend(source.rglob(pat))
+    return sorted(set(out))
+
+
+def _read_rag_text(fp: Path) -> str:
+    """读取文本文件；剥离 YAML frontmatter（``--- ... ---``），避免把元数据当正文。"""
+    try:
+        raw = fp.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return ""
+    if raw.startswith("---"):
+        end = raw.find("\n---", 3)
+        if end != -1:
+            raw = raw[end + 4:]
+    return raw
+
+
+def _rag_result_to_dict(result) -> dict:
+    """将 RetrievalResult 转为可 JSON 序列化的 dict（供 --json）。"""
+    return {
+        "mode": result.mode,
+        "warning": result.warning,
+        "tokens_used": result.tokens_used,
+        "citations": result.citations,
+        "chunks": [
+            {
+                "chunk_id": c.chunk.chunk_id,
+                "score": round(c.score, 4),
+                "text": c.chunk.text,
+                "metadata": c.chunk.metadata,
+            }
+            for c in result.chunks
+        ],
+    }
+
+
+def _print_rag_result(result) -> None:
+    print(
+        f"[rag] 模式={result.mode} 命中={len(result.chunks)} 引用={len(result.citations)} "
+        f"tokens={result.tokens_used}" + (" [软告警]" if result.warning else "")
+    )
+    if result.mode == "citation_only":
+        print("[rag] 已达 token 硬上限，仅返回引用（citation-only 降级）：")
+        for c in result.citations:
+            print(f"  - {c.get('doi')} (score={c.get('score')}, chunk={c.get('chunk_id')})")
+        return
+    for i, sc in enumerate(result.chunks, 1):
+        snippet = sc.chunk.text[:120].replace("\n", " ")
+        print(f"  {i}. [{sc.score:.3f}] {sc.chunk.metadata.get('doi', '')}")
+        print(f"     {snippet}")
+
+
+def cmd_rag(args) -> int:
+    """文献 RAG 索引与检索（sidecar 接入编排层，Backlog C ①）。
+
+    - ``index``：把本地文献（目录递归 / 单文件）分片嵌入，持久化到
+      ``<workspace>/.verity/rag-index.json``（跨进程共享）。实例化 ``LiteratureIndex`` 时
+      注入 ``rag_write_observer(workspace)``，opt-in 开启时自动记录 ``rag_index_write`` 事件
+      （见 docs/collab.md §7.7）。
+    - ``query``：从持久化索引检索，输出命中（或 token 超硬上限时 citation-only 降级）。
+
+    不改变协作模型本身——仅为已就绪的 RAG 埋点提供真实可用的 CLI 入口。
+    """
+    from orchestrator.collab_telemetry import rag_write_observer
+    from sidecar.rag.literature_rag import (
+        LiteratureIndex,
+        LiteratureRAG,
+        chunk_document,
+        load_index,
+        save_index,
+    )
+
+    workspace = Path(args.path)
+    index_path = workspace / ".verity" / "rag-index.json"
+
+    if args.action == "index":
+        if not args.target:
+            print("[ERROR] index 需要提供目录或文件：vl rag index <目录或文件>")
+            return EXIT_ERROR
+        source = Path(args.target)
+        if not source.exists():
+            print(f"[ERROR] 索引源不存在: {source}")
+            return EXIT_ERROR
+        patterns = [p.strip() for p in args.glob.split(",") if p.strip()]
+        files = _collect_rag_files(source, patterns)
+        if not files:
+            print(f"[WARN] 未匹配到可索引文本文件: {source} (patterns={patterns})")
+            return EXIT_OK
+
+        existing = (
+            None
+            if args.reset
+            else load_index(index_path, write_observer=rag_write_observer(workspace))
+        )
+        index = existing or LiteratureIndex(write_observer=rag_write_observer(workspace))
+
+        known_ids = {c.chunk_id for c in index._chunks}
+        added_files = 0
+        added_chunks = 0
+        for fp in files:
+            text = _read_rag_text(fp)
+            if not text.strip():
+                continue
+            doc_id = fp.resolve().as_posix()
+            chunks = chunk_document(
+                text, metadata={"doi": doc_id, "source": str(fp), "doc_path": str(fp)}
+            )
+            fresh = [c for c in chunks if c.chunk_id not in known_ids]
+            if fresh:
+                index.add(fresh)
+                known_ids.update(c.chunk_id for c in fresh)
+                added_chunks += len(fresh)
+            added_files += 1
+        save_index(index, index_path)
+        print(
+            f"[rag] 已处理 {added_files}/{len(files)} 个文件，新增 {added_chunks} 个分片"
+            f"（索引共 {index.size} 分片）→ {index_path}"
+        )
+        return EXIT_OK
+
+    # action == query
+    if not args.query:
+        print("[ERROR] query 需要提供检索语句：vl rag query --query \"...\"")
+        return EXIT_ERROR
+    index = load_index(index_path)
+    if index is None or index.size == 0:
+        print("[rag] 索引为空，请先运行 `vl rag index <目录或文件>`")
+        return EXIT_OK
+
+    from copy import deepcopy
+
+    from sidecar.rag.literature_rag import CONFIG, OFFLINE_SCORE_THRESHOLD
+
+    cfg = deepcopy(CONFIG)
+    # 离线默认 hash 嵌入器相似度量级低于真实稠密嵌入：未显式指定阈值时用放宽值保证可用
+    cfg["retrieval"]["score_threshold"] = (
+        args.min_score if args.min_score is not None else OFFLINE_SCORE_THRESHOLD
+    )
+    rag = LiteratureRAG(index=index, config=cfg)
+    result = rag.retrieve(
+        args.query, top_k=args.top_k, force_citation_only=args.force_citation_only
+    )
+    if args.json:
+        print(json.dumps(_rag_result_to_dict(result), ensure_ascii=False))
+    else:
+        _print_rag_result(result)
+    return EXIT_OK
+
+
 def cmd_sandbox(args) -> int:
     """生成项目专属沙箱 compose（依据 design-blueprint.md §2.8.2）。"""
     from orchestrator.sandbox import (
@@ -610,6 +768,32 @@ def build_parser() -> argparse.ArgumentParser:
     )
     sp.add_argument("--json", action="store_true", help="输出 JSON（供 CI/hook 解析）")
     sp.set_defaults(func=cmd_identity)
+
+    sp = sub.add_parser("rag", help="文献 RAG 索引与检索（sidecar 接入，Backlog C ①）")
+    sp.add_argument("action", choices=["index", "query"])
+    sp.add_argument("target", nargs="?", default=None, help="index：待索引的目录或文件")
+    sp.add_argument("--query", default=None, help="query：检索语句")
+    sp.add_argument("--path", default=".", help="Workspace 目录（索引落盘根）")
+    sp.add_argument(
+        "--glob",
+        default="*.md,*.txt,*.rst,*.tex",
+        help="index：递归匹配的文件模式（逗号分隔，默认 *.md,*.txt,*.rst,*.tex）",
+    )
+    sp.add_argument("--top-k", type=int, default=None, help="query：返回条数（默认 CONFIG top_k=8）")
+    sp.add_argument(
+        "--min-score",
+        type=float,
+        default=None,
+        help="query：最低相似度阈值（默认自动：离线 hash 嵌入器放宽为 0.05；接入真实嵌入模型后可显式指定，如 0.72）",
+    )
+    sp.add_argument("--reset", action="store_true", help="index：清空已有索引后重建")
+    sp.add_argument("--json", action="store_true", help="query：输出 JSON")
+    sp.add_argument(
+        "--force-citation-only",
+        action="store_true",
+        help="query：强制 citation-only 降级（仅返回引用，不注入全文）",
+    )
+    sp.set_defaults(func=cmd_rag)
 
     return p
 
