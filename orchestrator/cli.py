@@ -385,12 +385,16 @@ def _load_research_safe(workspace: Path) -> dict | None:
 
 def cmd_branch(args) -> int:
     """Git 假设分支协作：create / merge / status。"""
+    import os
+
     from orchestrator.collab import (
         check_merge_readiness,
         create_hypothesis_branch,
         current_branch,
+        current_committer,
         merge_to_main,
     )
+    from orchestrator.collab_telemetry import is_enabled, record
 
     workspace = Path(args.path)
     if args.action == "create":
@@ -429,6 +433,25 @@ def cmd_branch(args) -> int:
     if not ok:
         print(f"[BLOCKED] 合并未完成: {info}")
         return EXIT_BLOCKED
+
+    # 身份误配检测（§7.2 gap② / §7.3 身份误配信号）：committer vs VL_USER
+    if is_enabled(_load_research_safe(workspace)):
+        vl_user = os.environ.get("VL_USER")
+        committer = current_committer(workspace)
+        git_user = (committer or {}).get("name") if committer else None
+        match = bool(vl_user) and bool(git_user) and vl_user == git_user
+        record(
+            workspace,
+            "identity_mismatch",
+            {
+                "vl_user": vl_user,
+                "git_user": git_user,
+                "git_email": (committer or {}).get("email") if committer else None,
+                "match": match,
+                "context": "branch_merge",
+            },
+            research=_load_research_safe(workspace),
+        )
     print(f"[branch] 已合并 {info} → main（--no-ff）")
     return EXIT_OK
 

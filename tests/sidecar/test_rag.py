@@ -129,3 +129,26 @@ def test_auto_archive_keeps_metadata_only():
     # 归档后不再参与检索
     res = idx.query("构象差异", top_k=5, score_threshold=0.0)
     assert all("构象" not in (c.chunk.text or "") for c in res)
+
+
+def test_write_observer_called_on_add():
+    calls = []
+    idx = LiteratureIndex(write_observer=lambda op, meta: calls.append((op, meta)))
+    idx.add([Chunk(chunk_id="d#0", text="t", metadata={"doi": "10.0/0"})])
+    assert ("add", {"chunks_added": 1, "dois": ["10.0/0"]}) in calls
+
+
+def test_write_observer_called_on_archive():
+    calls = []
+    idx = LiteratureIndex(write_observer=lambda op, meta: calls.append((op, meta)))
+    idx.add([Chunk(chunk_id="d#0", text="构象差异", metadata={"doi": "10.0/0"})])
+    n = idx.archive(lambda c: "构象" in c.text)
+    assert n == 1
+    assert ("archive", {"chunks_archived": 1}) in calls
+
+
+def test_no_observer_by_default_no_error():
+    idx = LiteratureIndex()
+    idx.add([Chunk(chunk_id="d#0", text="t", metadata={})])
+    assert idx.size == 1
+    assert idx.archive(lambda c: True) == 1

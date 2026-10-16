@@ -105,10 +105,13 @@ fi
 1. **写锁会话期强制检查未启用**：`docs/collab.md` 自承 `pre_session` 第④步为"预留注释位"，默认不生效。
    即"并行写作强制写锁"目前依赖使用者自觉，不是系统强制。
 2. **身份是弱约定**：锁持有者仅为自由字符串，`VL_USER` 由团队口头约定注入；无认证/身份服务，
-   错配会使写锁互斥语义失真（A 误标自己为 B 即可绕过）。
+   错配会使写锁互斥语义失真（A 误标自己为 B 即可绕过）。**进展**：merge 时的 `VL_USER` vs git committer
+   精确比对已落地（`identity_mismatch` 埋点），但「无认证」本身仍是真实 gap（身份可伪造）。
 3. **共享会话 / 同文件并发是硬缺口**：若真实团队确实需要"多人同会话"或"同文件并发编辑"，
    当前模型明确不支持，需重新设计（非小修）。
 4. **RAG 文献库共享的并发写入协议未定义**：`sidecar/rag` 支持共享索引，但多人同时归档/检索的写入一致性无约定。
+   **进展**：写入动作已可观测（`rag_index_write` 埋点，opt-in），可采集「同一时间窗不同 `vl_user` 写入」信号；
+   但「并发写入协议（锁/串行化）」本身仍未定义（命中 §7.4 阈值后才进入设计）。
 5. **无内建审阅批注结构**：审阅依赖 Git PR review，项目内无结构化的 review annotation（如针对某假设/某实验的批注留痕）。
 6. **无角色/权限**：谁能 merge、谁能批准假设（refuted/revised）无内建角色区分，全靠 Git 平台权限。
 
@@ -120,9 +123,9 @@ fi
 | 写锁绕过实例 | 未持锁却改了被锁制品 | Git diff 比对 holder vs committer | 写锁 |
 | 假设分支数量 / 合并周期 | 并行度与合回延迟 | `git` 日志统计 | 分支流 |
 | merge 冲突次数 | 并行写作/实验的真实冲突 | Git 日志 | 分支流 |
-| 身份误配 | `VL_USER` 与 committer 不一致 | opt-in 埋点 | 身份 |
+| 身份误配 | `VL_USER` 与 git committer 不一致 | ✅ opt-in 埋点已落地（`identity_mismatch`） | 身份 |
 | 共享会话/同文件并发请求 | 团队是否真的需要非目标能力 | 人工访谈 / 使用日志 | 非目标项 |
-| RAG 并发写入冲突 | 共享文献库一致性问题 | opt-in 埋点 | RAG |
+| RAG 并发写入冲突 | 共享文献库一致性问题 | 🟡 opt-in 能力就绪（`rag_index_write`，待编排层接线） | RAG |
 
 > 埋点为 **opt-in**：默认关闭，仅当团队同意观测时开启，避免把"协作监控"强加给单人用户（实现见 §7.7，默认零副作用）。
 
@@ -149,19 +152,26 @@ fi
 - 开启（任一）：环境变量 `VL_TELEMETRY=1`；或 `RESEARCH.yaml` 置 `collab_telemetry: true`。
   **默认关闭，零副作用**（不建文件、不影响命令结果、写入失败静默吞掉）。
 - 落盘：`<workspace>/.verity/collab-audit.jsonl`（JSONL，每行一条事件；已加入 `.gitignore`，默认不入库，避免泄露 holder 身份）。
-- 采集事件：
+- 采集事件（每条均附 `ts`、`vl_user`）：
   - `lock_acquire`：`outcome` ∈ `granted` / `rejected_conflict`（含 `existing_holder`）/ `error`；
   - `lock_release`：`attempted`；
   - `branch_create`：`hypothesis_id` / `branch`；
-  - `branch_merge`：`outcome` ∈ `merged` / `blocked`（含 `detail`）。
-  - 每条事件附带 `ts`、`vl_user`（来自 `VL_USER` 环境变量）。
-- 身份代理检测：`vl_user` 与锁 `holder` 不一致可作「冒充 / 身份误配」的一阶代理
-  （精确「VL_USER vs git committer」比对为后续扩展，见 7.2 gap ②）。
-- **尚未覆盖**（7.3 中其余信号，待后续）：RAG 共享索引并发写入冲突、精确的 committer 身份误配、
-  「共享会话 / 同文件并发」需求访谈。
+  - `branch_merge`：`outcome` ∈ `merged` / `blocked`（含 `detail`）；
+  - `identity_mismatch`（**2026-10-16 落地**）：merge 成功时比对 `VL_USER` 与 git committer
+    （`git config user.name/email`），`payload` 含 `vl_user` / `git_user` / `git_email` / `match` / `context`。
+    这是 §7.2 gap②「身份弱约定」的**精确**检测（不再只是锁 holder 的一阶代理）。
+  - `rag_index_write`（**2026-10-16 落地，能力就绪**）：RAG 共享索引的写入动作
+    （`op` ∈ `add` / `archive`，含分片数 / doi）。由编排层在实例化 `LiteratureIndex` / `LiteratureRAG`
+    时注入 `rag_write_observer(workspace)` 回调触发（见下「RAG 接线」）。
+- 身份检测：锁 `holder` vs `vl_user` 仍作「冒充」一阶代理；`identity_mismatch` 是 git committer 层面的精确比对。
+- **RAG 接线说明**：`sidecar/rag` 当前为纯内存索引且尚未被编排层 CLI 采用，故 `rag_index_write` 事件
+  需编排层在实例化 RAG 时传入 `write_observer=rag_write_observer(workspace)` 才会产生。
+  埋点能力已就绪且单测覆盖（`add` / `archive` 触发）；待 RAG 接入编排层即自动生效。
+- **尚未覆盖**（7.3 中唯一剩余）：「共享会话 / 同文件并发」需求访谈（硬缺口，需真实团队反馈才启动设计）。
 
 ### 7.6 下一步
 
-1. ✅ 已为写锁/分支流加 **opt-in 埋点**（见 7.7），信号可量化；默认关闭，不影响单人用户。
-2. 在 1–10 人真实团队中使用 verity-lens，按 7.3 / 7.7 采集信号。
-3. 信号命中 7.4 阈值 → 启动模型变更设计（从真实痛点出发，不预设方案）。
+1. ✅ 已为写锁 / 分支流 / committer 身份误配 / RAG 写入加 **opt-in 埋点**（见 7.7），信号可量化；默认关闭。
+2. ⏳ RAG 埋点待编排层采用 `rag_write_observer` 接线后自动生效（能力已就绪）。
+3. 在 1–10 人真实团队中使用 verity-lens，按 7.3 / 7.7 采集信号。
+4. 信号命中 7.4 阈值 → 启动模型变更设计（从真实痛点出发，不预设方案）。

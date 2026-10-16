@@ -150,16 +150,27 @@ class LiteratureIndex:
         self,
         embedder: Callable[[str], list[float]] | None = None,
         vector_dim: int = 256,
+        write_observer: Callable[[str, dict], None] | None = None,
     ):
         self._embedder = embedder or (lambda t: _default_embedder(t, vector_dim))
         self._dim = vector_dim
         self._chunks: list[Chunk] = []
+        self._write_observer = write_observer  # opt-in 写入观测回调（零依赖、零副作用）
 
     def add(self, chunks: Iterable[Chunk]) -> None:
-        for c in chunks:
+        items = list(chunks)
+        for c in items:
             if not c.vector:
                 c.vector = self._embedder(c.text)
             self._chunks.append(c)
+        if self._write_observer:
+            self._write_observer(
+                "add",
+                {
+                    "chunks_added": len(items),
+                    "dois": sorted({c.metadata.get("doi") for c in items}),
+                },
+            )
 
     @property
     def size(self) -> int:
@@ -190,6 +201,8 @@ class LiteratureIndex:
                 c.vector = []
                 c.archived = True
                 count += 1
+        if self._write_observer:
+            self._write_observer("archive", {"chunks_archived": count})
         return count
 
 
@@ -265,9 +278,12 @@ class LiteratureRAG:
         cache: SessionCache | None = None,
         config: dict | None = None,
         embedder: Callable[[str], list[float]] | None = None,
+        write_observer: Callable[[str, dict], None] | None = None,
     ):
         self.config = config or CONFIG
-        self.index = index or LiteratureIndex(embedder=embedder)
+        self.index = index or LiteratureIndex(
+            embedder=embedder, write_observer=write_observer
+        )
         self.cache = cache or SessionCache(self.config["cache"]["per_session_limit"])
 
     def retrieve(

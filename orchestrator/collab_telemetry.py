@@ -10,9 +10,10 @@
 记录到 ``<workspace>/.verity/collab-audit.jsonl``（JSONL，每行一条事件）。
 观测失败（权限/磁盘）一律静默吞掉，绝不干扰主流程。
 
-**范围**：本次仅覆盖写锁（acquire/release 冲突与授予）与 Git 假设分支（create/merge），
-对应 §7.3 的「锁竞争事件 / 写锁绕过实例（holder vs vl_user 代理检测）/ merge 冲突」。
-RAG 并发写入、精确的「VL_USER vs git committer」身份误配为后续扩展。
+**范围**：覆盖写锁（acquire/release 冲突与授予）、Git 假设分支（create/merge）、
+merge 时的 committer 身份误配（``identity_mismatch``），以及 RAG 共享索引写入
+（``rag_index_write``，通过 ``rag_write_observer`` 由编排层在实例化 RAG 时注入）。
+对应 §7.3 的「锁竞争事件 / 写锁绕过实例 / merge 冲突 / 身份误配 / RAG 并发写入」。
 """
 from __future__ import annotations
 
@@ -82,3 +83,24 @@ def record(
     except OSError:
         # 观测失败绝不阻塞主流程
         return False
+
+
+def rag_write_observer(
+    workspace: Path,
+    research: dict[str, Any] | None = None,
+) -> Callable[[str, dict[str, Any]], None]:
+    """返回供 ``LiteratureIndex`` / ``LiteratureRAG`` 注入的写入观测回调（opt-in 透明）。
+
+    编排层在实例化 RAG 时传入此回调，即可在 opt-in 开启时记录 ``rag_index_write`` 事件，
+    默认（未开启）回调内部 ``record`` 直接返回，零副作用、不依赖 orchestrator 之外的任何东西。
+
+    用法::
+
+        from orchestrator.collab_telemetry import rag_write_observer
+        idx = LiteratureIndex(write_observer=rag_write_observer(workspace))
+
+    事件 ``rag_index_write`` payload：``op``（``add`` / ``archive``）+ 写入分片数 / doi 等。
+    """
+    def _obs(op: str, meta: dict[str, Any]) -> None:
+        record(workspace, "rag_index_write", {"op": op, **meta}, research=research)
+    return _obs

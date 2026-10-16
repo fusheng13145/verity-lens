@@ -2,6 +2,27 @@
 
 > 遵循 Keep a Changelog 风格，版本号 `MAJOR.MINOR.PATCH`。
 
+## [1.13.4] - 2026-10-16 — 协作埋点扩展：committer 身份误配 + RAG 写入观测
+
+### Added
+- **committer 身份误配检测（精确）**：`orchestrator/collab.py` 新增 `current_committer()`（读 `git config user.name/email`）；
+  `vl branch merge` 成功时比对 `VL_USER` 与 git committer，记录 `identity_mismatch` 事件
+  （`vl_user`/`git_user`/`git_email`/`match`/`context`）。这是 §7.2 gap②「身份弱约定」的精确检测
+  （此前仅有锁 `holder` 的一阶代理）。
+- **RAG 写入观测钩子（能力就绪）**：`sidecar/rag/literature_rag.py` 的 `LiteratureIndex`/`LiteratureRAG`
+  新增可选 `write_observer` 回调（零依赖、零副作用）；`orchestrator/collab_telemetry.py` 新增
+  `rag_write_observer(workspace)` 工厂，opt-in 开启时记录 `rag_index_write` 事件（`op` ∈ add/archive + 分片数/doi）。
+- 测试：新增 8 例（telemetry 工厂 2 + CLI committer 检测 3 + RAG observer 3）；全量 217 通过。
+
+### Changed
+- `docs/collab.md` §7.2/§7.3/§7.6/§7.7 同步：RAG 并发写入与 committer 身份误配标记为已落地/能力就绪；
+  「尚未覆盖」收敛为唯一剩余项「共享会话/同文件并发需求访谈」。
+
+### Scope Note
+- 仍为**纯观测，不改变协作模型本身**（符合蓝图"不预设方案"）。
+- `rag_index_write` 事件需编排层在实例化 RAG 时传入 `write_observer=rag_write_observer(workspace)` 才会产生
+  （`sidecar/rag` 当前为纯内存索引且尚未被编排层 CLI 采用）；埋点能力已就绪且单测覆盖（`add`/`archive` 触发）。
+
 ## [1.13.3] - 2026-10-16 — 协作观测 opt-in 埋点（重评估信号采集）
 
 ### Added

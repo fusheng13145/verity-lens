@@ -122,3 +122,84 @@ def test_cli_lock_no_side_effect_when_disabled(tmp_path, monkeypatch):
     ws = _init_workspace(tmp_path)
     cli.cmd_lock(_ns(action="acquire", artifact="m", holder="a", ttl=3600, json=False, path=str(ws)))
     assert not (ws / ".verity").exists()
+
+
+def test_rag_write_observer_records_when_enabled(tmp_path, monkeypatch):
+    from orchestrator.collab_telemetry import rag_write_observer
+
+    monkeypatch.setenv("VL_TELEMETRY", "1")
+    sink = tmp_path / ".verity" / "collab-audit.jsonl"
+    obs = rag_write_observer(tmp_path, research=None)
+    obs("add", {"chunks_added": 2, "dois": ["10.0/1"]})
+    lines = _read_jsonl(sink)
+    assert len(lines) == 1
+    assert lines[0]["event"] == "rag_index_write"
+    assert lines[0]["op"] == "add"
+    assert lines[0]["chunks_added"] == 2
+
+
+def test_rag_write_observer_no_side_effect_when_disabled(tmp_path, monkeypatch):
+    from orchestrator.collab_telemetry import rag_write_observer
+
+    monkeypatch.delenv("VL_TELEMETRY", raising=False)
+    obs = rag_write_observer(tmp_path, research=None)
+    obs("add", {"chunks_added": 2})
+    assert not (tmp_path / ".verity").exists()
+
+
+def test_cli_branch_merge_identity_match(tmp_path, monkeypatch):
+    import orchestrator.cli as cli
+    import orchestrator.collab as collab
+
+    monkeypatch.setenv("VL_TELEMETRY", "1")
+    monkeypatch.setenv("VL_USER", "alice")
+    monkeypatch.setattr(collab, "merge_to_main", lambda workspace: (True, "hypothesis/H1"))
+    monkeypatch.setattr(
+        collab, "current_committer", lambda workspace: {"name": "alice", "email": "a@x"}
+    )
+    ws = _init_workspace(tmp_path)
+    rc = cli.cmd_branch(_ns(action="merge", hypothesis_id=None, path=str(ws)))
+    assert rc == 0
+    events = _read_jsonl(ws / ".verity" / "collab-audit.jsonl")
+    idm = [e for e in events if e["event"] == "identity_mismatch"]
+    assert idm, "merge 成功应记录 identity_mismatch"
+    assert idm[0]["vl_user"] == "alice"
+    assert idm[0]["git_user"] == "alice"
+    assert idm[0]["match"] is True
+    assert idm[0]["context"] == "branch_merge"
+
+
+def test_cli_branch_merge_identity_mismatch(tmp_path, monkeypatch):
+    import orchestrator.cli as cli
+    import orchestrator.collab as collab
+
+    monkeypatch.setenv("VL_TELEMETRY", "1")
+    monkeypatch.setenv("VL_USER", "bob")
+    monkeypatch.setattr(collab, "merge_to_main", lambda workspace: (True, "hypothesis/H1"))
+    monkeypatch.setattr(
+        collab, "current_committer", lambda workspace: {"name": "alice", "email": "a@x"}
+    )
+    ws = _init_workspace(tmp_path)
+    cli.cmd_branch(_ns(action="merge", hypothesis_id=None, path=str(ws)))
+    idm = [
+        e
+        for e in _read_jsonl(ws / ".verity" / "collab-audit.jsonl")
+        if e["event"] == "identity_mismatch"
+    ][0]
+    assert idm["vl_user"] == "bob"
+    assert idm["git_user"] == "alice"
+    assert idm["match"] is False
+
+
+def test_cli_branch_merge_no_side_effect_when_disabled(tmp_path, monkeypatch):
+    import orchestrator.cli as cli
+    import orchestrator.collab as collab
+
+    monkeypatch.delenv("VL_TELEMETRY", raising=False)
+    monkeypatch.setattr(collab, "merge_to_main", lambda workspace: (True, "hypothesis/H1"))
+    monkeypatch.setattr(
+        collab, "current_committer", lambda workspace: {"name": "alice", "email": "a@x"}
+    )
+    ws = _init_workspace(tmp_path)
+    cli.cmd_branch(_ns(action="merge", hypothesis_id=None, path=str(ws)))
+    assert not (ws / ".verity").exists()

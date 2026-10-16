@@ -128,3 +128,22 @@ def merge_to_main(
         git_runner(["merge", "--abort"], cwd=workspace)
         return False, res.stderr.strip() or "合并冲突，已中止（请手动解决）"
     return True, branch
+
+
+def current_committer(
+    cwd: Path,
+    git_runner: Callable = _real_git,
+) -> Optional[dict]:
+    """读取当前 git 提交者身份（user.name / user.email）。
+
+    用于与 ``VL_USER`` 比对，检测身份误配（协作文档 §7.2 gap② / §7.3 身份误配信号）。
+    读取失败（非仓库 / 未配置）返回 ``None``。
+    """
+    name_res = git_runner(["config", "user.name"], cwd=cwd)
+    email_res = git_runner(["config", "user.email"], cwd=cwd)
+    if name_res.returncode != 0 and email_res.returncode != 0:
+        return None
+    return {
+        "name": name_res.stdout.strip() or None,
+        "email": email_res.stdout.strip() or None,
+    }
