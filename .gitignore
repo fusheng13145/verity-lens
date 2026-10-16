@@ -18,6 +18,7 @@ web/.vite/
 .workbuddy/
 .dsh/
 workspaces/
+.verity/
 
 # ── 生成物（保留模板，忽略按项目渲染的沙箱 compose）──
 docker/sandbox-compose.*.yml

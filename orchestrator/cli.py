@@ -16,6 +16,8 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+from orchestrator.collab_telemetry import record
+
 PHASES: tuple[str, ...] = ("literature", "question", "experiment", "analysis", "writing")
 CATEGORIES: tuple[str, ...] = ("EXEC", "DATA", "METH", "HYP", "EPIS")
 
@@ -244,21 +246,52 @@ def cmd_lock(args) -> int:
         conflict = conflict_for_holder(research, args.artifact, holder)
         if conflict:
             print(f"[BLOCKED] {conflict}")
+            record(
+                workspace,
+                "lock_acquire",
+                {
+                    "artifact": args.artifact,
+                    "holder": holder,
+                    "outcome": "rejected_conflict",
+                    "existing_holder": (research.get("locks") or {})
+                    .get(args.artifact, {})
+                    .get("holder"),
+                },
+                research=research,
+            )
             return EXIT_BLOCKED
         new_research, err = acquire_lock(
             research, args.artifact, holder, ttl_seconds=args.ttl
         )
         if err:
             print(f"[BLOCKED] {err}")
+            record(
+                workspace,
+                "lock_acquire",
+                {"artifact": args.artifact, "holder": holder, "outcome": "error"},
+                research=research,
+            )
             return EXIT_BLOCKED
         save_project(workspace, new_research)
         print(f"[lock] {args.artifact} 已锁定 by {holder}（TTL={args.ttl}s）")
+        record(
+            workspace,
+            "lock_acquire",
+            {"artifact": args.artifact, "holder": holder, "outcome": "granted"},
+            research=research,
+        )
         return EXIT_OK
 
     # action == release
     new_research = release_lock(research, args.artifact, holder=holder)
     save_project(workspace, new_research)
     print(f"[lock] {args.artifact} 已释放（by {holder}）")
+    record(
+        workspace,
+        "lock_release",
+        {"artifact": args.artifact, "holder": holder, "attempted": True},
+        research=research,
+    )
     return EXIT_OK
 
 
@@ -340,6 +373,16 @@ def cmd_finalize(args) -> int:
     return EXIT_BLOCKED
 
 
+def _load_research_safe(workspace: Path) -> dict | None:
+    """安全加载 RESEARCH.yaml（用于读取 collab_telemetry 配置）；失败返回 None。"""
+    try:
+        from orchestrator.gates import load_project
+
+        return load_project(workspace)
+    except Exception:
+        return None
+
+
 def cmd_branch(args) -> int:
     """Git 假设分支协作：create / merge / status。"""
     from orchestrator.collab import (
@@ -356,6 +399,12 @@ def cmd_branch(args) -> int:
             print(f"[ERROR] {info}")
             return EXIT_ERROR
         print(f"[branch] 已切出假设分支: {info}")
+        record(
+            workspace,
+            "branch_create",
+            {"hypothesis_id": args.hypothesis_id, "branch": info},
+            research=_load_research_safe(workspace),
+        )
         return EXIT_OK
 
     if args.action == "status":
@@ -367,6 +416,16 @@ def cmd_branch(args) -> int:
 
     # action == merge
     ok, info = merge_to_main(workspace)
+    record(
+        workspace,
+        "branch_merge",
+        {
+            "outcome": "merged" if ok else "blocked",
+            "branch": info if ok else None,
+            "detail": None if ok else info,
+        },
+        research=_load_research_safe(workspace),
+    )
     if not ok:
         print(f"[BLOCKED] 合并未完成: {info}")
         return EXIT_BLOCKED

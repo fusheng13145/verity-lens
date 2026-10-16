@@ -2,6 +2,23 @@
 
 > 遵循 Keep a Changelog 风格，版本号 `MAJOR.MINOR.PATCH`。
 
+## [1.13.3] - 2026-10-16 — 协作观测 opt-in 埋点（重评估信号采集）
+
+### Added
+- **协作观测埋点**（`orchestrator/collab_telemetry.py`）：为协作模型重评估（见 `docs/collab.md` §7）量化信号。
+  - 覆盖写锁（`lock_acquire` granted/rejected_conflict/error、`lock_release`）与 Git 假设分支（`branch_create`、`branch_merge` merged/blocked）。
+  - 每条事件附带 `ts` 与 `vl_user`（来自 `VL_USER` 环境变量），可作身份误配一阶代理。
+- CLI 接线：`cmd_lock` / `cmd_branch` 调用 `record()`；默认**关闭、零副作用**（不建文件、不影响命令、写入失败静默吞掉）。
+
+### Changed
+- **opt-in 开关**：环境变量 `VL_TELEMETRY=1`（或 true/yes/on）或 `RESEARCH.yaml` 置 `collab_telemetry: true`。
+- 落盘 `<workspace>/.verity/collab-audit.jsonl`（JSONL）；`.gitignore` 新增 `.verity/`，默认不入库避免泄露 holder 身份。
+- `docs/collab.md` 新增 §7.7（埋点实现），§7.3/§7.6 同步；`TODO.md` 协作模型重评估项标记埋点已落地。
+
+### Scope Note
+- 本次**仅做观测，不改变协作模型本身**（符合蓝图"不预设方案"）。
+- 尚未覆盖 7.3 中其余信号（RAG 并发写入冲突、精确 committer 身份误配、"共享会话/同文件并发"需求访谈），留待后续。
+
 ## [1.13.2] - 2026-10-16 — 底座升级 0.2.0-rc.2 + 事件流/session 接管联调
 
 ### Changed

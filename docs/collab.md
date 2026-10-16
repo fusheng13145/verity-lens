@@ -124,7 +124,7 @@ fi
 | 共享会话/同文件并发请求 | 团队是否真的需要非目标能力 | 人工访谈 / 使用日志 | 非目标项 |
 | RAG 并发写入冲突 | 共享文献库一致性问题 | opt-in 埋点 | RAG |
 
-> 埋点为 **opt-in**：默认关闭，仅当团队同意观测时开启，避免把"协作监控"强加给单人用户。
+> 埋点为 **opt-in**：默认关闭，仅当团队同意观测时开启，避免把"协作监控"强加给单人用户（实现见 §7.7，默认零副作用）。
 
 ### 7.4 触发模型变更的决策阈值（示例，非承诺）
 
@@ -141,8 +141,27 @@ fi
 共享会话模式、内建 review 批注结构、轻量身份/角色服务、RAG 写入一致性协议。
 **这些一律待 7.3 信号 + 7.4 阈值命中后才进入设计。**
 
+### 7.7 埋点实现（opt-in 已落地，2026-10-16）
+
+写锁与 Git 假设分支的观测埋点已落地（**不改变协作模型本身**，仅做观测）：
+
+- 模块：`orchestrator/collab_telemetry.py`（`record()` / `is_enabled()`），CLI 在 `cmd_lock` / `cmd_branch` 中调用。
+- 开启（任一）：环境变量 `VL_TELEMETRY=1`；或 `RESEARCH.yaml` 置 `collab_telemetry: true`。
+  **默认关闭，零副作用**（不建文件、不影响命令结果、写入失败静默吞掉）。
+- 落盘：`<workspace>/.verity/collab-audit.jsonl`（JSONL，每行一条事件；已加入 `.gitignore`，默认不入库，避免泄露 holder 身份）。
+- 采集事件：
+  - `lock_acquire`：`outcome` ∈ `granted` / `rejected_conflict`（含 `existing_holder`）/ `error`；
+  - `lock_release`：`attempted`；
+  - `branch_create`：`hypothesis_id` / `branch`；
+  - `branch_merge`：`outcome` ∈ `merged` / `blocked`（含 `detail`）。
+  - 每条事件附带 `ts`、`vl_user`（来自 `VL_USER` 环境变量）。
+- 身份代理检测：`vl_user` 与锁 `holder` 不一致可作「冒充 / 身份误配」的一阶代理
+  （精确「VL_USER vs git committer」比对为后续扩展，见 7.2 gap ②）。
+- **尚未覆盖**（7.3 中其余信号，待后续）：RAG 共享索引并发写入冲突、精确的 committer 身份误配、
+  「共享会话 / 同文件并发」需求访谈。
+
 ### 7.6 下一步
 
-1. 决定是否为写锁/分支流加 **opt-in 埋点**（见 7.3），使信号可量化。
-2. 在 1–10 人真实团队中使用 verity-lens，按 7.3 采集信号。
+1. ✅ 已为写锁/分支流加 **opt-in 埋点**（见 7.7），信号可量化；默认关闭，不影响单人用户。
+2. 在 1–10 人真实团队中使用 verity-lens，按 7.3 / 7.7 采集信号。
 3. 信号命中 7.4 阈值 → 启动模型变更设计（从真实痛点出发，不预设方案）。
