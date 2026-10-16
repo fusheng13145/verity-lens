@@ -10,6 +10,9 @@
   `--json`/`--session-id`/`--dump-config-schema`，事件流与 session 接管不再降级，patch schema 可机读校验"。
 - 文档同步：`deployment-ops.md` / `interfaces.md` / `design-blueprint.md` / `README.md` / `TODO.md`
   的实测版本与"≥0.2 能力已激活"表述。
+- 文档梳理（纯文档，无代码变更）：`TODO.md` 新增「待完成事项（Backlog）」分区（按
+  待发布 / 外部依赖阻塞 / 可选增强 三组归类），并清理底部重复的初版路线图草稿；
+  `README.md` 与 `design-blueprint.md` 同步"下一步仅余协作模型重评估 + API 配额"落地状态。
 
 ### Verified（真实底座端到端联调）
 - `dsh --profile headless --json "<task>"` 真实输出 NDJSON 事件流（`session`/`status`/`final` 类型），

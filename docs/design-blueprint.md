@@ -668,7 +668,7 @@ superseded_by: "exp_002"       # 被哪个修订实验接替
 | Phase 1 | 3–6 周 | 单学科端到端闭环（含失败闭环） | biomed L0 Bundle；Orchestrator Lite（门禁/预算）；failure_ledger + 回流引擎 | 一个学科检索→写作跑通；**构造 METH 类失败用例走通"归因→修订→再实验"全链路** |
 | Phase 2 | 7–12 周 | 领域包化 + 失败闭环完备 | Bundle 工厂 + L1 Bundle ×2；HYP/EPIS 回流；假设树 refuted/revised；Golden 扩充 | 换 Bundle 切换方法论；假设失败可自动产出合格新假设草案（审批通过率 ≥50%） |
 | Phase 3 | 4–6 月 | 健壮性与协作 | 容器沙箱 + RAG 侧车 + 制品写锁 + Git 分支协作流 | >1000 篇文献稳定召回；2 人并行分支协作无冲突事故 |
-| Phase 4 | 按需 | 扩展评估 | L2 Bundle；更多学科；**协作模型按实际需求重新评估（不预设方案）** | 3+ 学科 Bundle 在用；扩展决策有数据支撑 |
+| Phase 4 | 按需 | 扩展评估 | L2 Bundle（已落地：biomed / materials / compsci 均 L2）；更多学科；**协作模型按实际需求重新评估（不预设方案，待真实协作反馈）** | 3+ 学科 Bundle 在用（已满足）；扩展决策有数据支撑 |
 
 ---
 

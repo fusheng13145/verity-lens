@@ -95,5 +95,5 @@ npm run dev                  # http://localhost:5173
 ## 状态
 
 - 当前阶段：**核心闭环已落地（Phase 0–4g）** —— 文件即状态门禁、失败驱动迭代、学科包化（biomed / materials / compsci 三学科均 **L2**：Preset Patch + MCP 声明 + Golden 用例，`vl bundle load` 一键加载）、容器沙箱、RAG 侧车、制品写锁、Git 协作流、`vl finalize` 收尾闭环；HAL 契约已对齐真实底座 [deepseek-harness](https://github.com/deepseek-ai/deepseek-harness)（本机实测 0.2.0-rc.2；事件流/session 接管已端到端联调）；科研正确性闭环已落地（`power_analysis` + 关键数值确定性复算 + L3 抽检）；敏感数据脱敏工具 `desensitize`（k-匿名 / PHI 屏蔽 / DP 聚合 ε=1.0 / PHI 文本扫描守卫）与长任务提交工具 `hpc_submit`（dry_run/mock/slurm/pbs 可插拔、确定性、规避终端关闭中断）均已落地；并补 L4 集成测试证明 Sidecar 工具的 **stdio/MCP 通道与进程内模块产出逐字段等价**（"关键数值必经确定性工具"在两条调用通道下一致）。详见 [`TODO.md`](TODO.md) 与 [`CHANGELOG.md`](CHANGELOG.md)。
-- 下一步：底座升级至 ≥0.2 后的 NDJSON 事件流 / session 接管 / patch schema 联调 + 协作模型按真实痛点重评估。
+- 下一步（仅余）：协作模型按真实痛点重评估（蓝图明确"不预设方案"，待 1–10 人团队实际协作反馈）；完整 headless 端到端运行待 deepseek API 配额到位（本机 `QUOTA` 余额不足，外部账户）。底座 ≥0.2 的事件流 / session 接管 / patch schema 联调已于 2026-10-16 用真实 `0.2.0-rc.2` 完成。
 - 功能范围与成功指标见 [`docs/project-spec.md`](docs/project-spec.md)。

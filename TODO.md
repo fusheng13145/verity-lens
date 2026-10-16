@@ -15,6 +15,25 @@
   - Phase 4h ✅ 2026-10-16：**底座升级 0.2.0-rc.2 + 事件流/session 接管联调**——npm 装 `@deepseek-ai/dsh@0.2.0-rc.2`（全局目录 EPERM，改装用户级 prefix）；真实底座验证 `--json` NDJSON 事件流可被 `parse_event_stream` 解析、`--session-id` 已知 id 接管成功/未知 id 报 `does not exist`、`--dump-config-schema` 输出 Cordis JSON Schema；`hal/version_lock.yml` verified_version 钉到 0.2.0-rc.2；契约测试 40 例全过（修正 Makefile `hal-contract-test` 指向错误目录 `tests/hal_contract`→`hal/contract_tests`）。完整 headless 运行仅因 deepseek API QUOTA 失败（外部账户）
 - **下一步**：协作模型按真实痛点重评估（蓝图明确"不预设方案"，待 1–10 人团队实际协作反馈）；完整 headless 运行需先解决 deepseek API 配额（本机 QUOTA 余额不足，外部账户问题）
 
+## 待完成事项（Backlog）
+
+> 当前路线图（Phase 0–4 + L4 集成测试）已全部落地，项目进入"按需增强 / 等待真实反馈"阶段。
+> 下列为真实待办，按性质分组，避免与上方已勾选的 Phase 明细混淆。
+
+### A. 待发布（需用户本地操作）
+- [ ] **推送领先提交到 GitHub**：本地领先 `origin/main` 共 3 个提交（`0ce583f` hpc_submit / `81465d1` L4 集成测试 / `7a3a5ef` Phase 4h）。本环境沙箱将 `git push` 判定为"数据外发"拦截，须用户在本地终端执行：
+  `git push origin main`（若 Host key 验证失败，先 `git -c strictHostKeyChecking=accept-new push origin main`）。
+
+### B. 外部依赖阻塞（非本项目缺陷）
+- [ ] **deepseek API 配额**：完整 headless 端到端运行目前在模型调用处因 `QUOTA`（余额不足）失败。补齐配额后 `dsh --profile headless --json "<task>"` 即可跑通——底座、契约、适配器（`parse_event_stream` / `--session-id` 接管 / `--dump-config-schema`）均已用真实 `0.2.0-rc.2` 验证可用。
+- [ ] **协作模型重评估**：蓝图第七部分明确"不预设方案"。须待 1–10 人团队真实使用、收集协作痛点后，再评估是否调整协作模型（并行分支 / 制品写锁 / RAG 共享策略等）。当前无具体代码待办，属"数据收集阶段"。
+
+### C. 可选增强（非阻塞，按需）
+- [ ] **preset patch 机读校验**：`0.2` 已提供 `--dump-config-schema`（Cordis JSON Schema），可接入 `vl bundle load` 对 preset patch 字段做机读校验（目前为可选增强，未强制）。
+- [ ] **季度切换演练**：蓝图要求定期评估备选底座接入成本，预防 deepseek-harness 预览版破坏性变更。
+
+---
+
 ## Phase 4：扩展评估（按需）
 
 - [x] **Phase 4a** — 学科扩展 + 收尾闭环（2026-10-15）
@@ -104,29 +123,10 @@
 
 **遗留**：`numpy` / `scipy` 因网络慢未安装（仅 `stat_test` 需要，Phase 1 用到时再装）。
 
-## Phase 1：单学科端到端闭环（3–6 周）
+---
 
-- [ ] biomed L0 Bundle（SKILL.md + 通用验证脚本）
-- [ ] Orchestrator Lite：`vl init/gate/budget` + pre_session hook
-- [ ] failure_ledger schema + 回流引擎 v1（EXEC/METH 两类）
-- [ ] Golden 测试集 5–10 用例
-- [ ] 验收：检索→写作跑通；METH 类失败走通"归因→修订→再实验"
-
-## Phase 2：领域包化 + 失败闭环完备（7–12 周）
-
-- [ ] Bundle 工厂（`vl bundle new` + `_template/`）
-- [ ] L1 Bundle ×2；HYP/EPIS 回流；假设树 refuted/revised
-- [ ] Golden 集扩充（含失败闭环用例 METH/HYP 各 3 例）
-
-## Phase 3：健壮性与协作（4–6 月）
-
-- [ ] 容器沙箱（sandbox-compose）
-- [ ] RAG 侧车完整版（缓存/防膨胀/citation-only）
-- [ ] 制品写锁 + Git 分支协作流
-
-## Phase 4：扩展评估（按需）
-
-- [ ] L2 Bundle；3+ 学科在用后评估扩展与协作模型
+> **历史路线图草稿（已落地，保留备查）**：下方为 2026-10-14 初版路线图的分阶段待办草稿，
+> 现已全部落地于上方对应 Phase 的勾选项（Phase 0–4 + L4 集成测试），不再作为待办。
 
 ## 文档体系（已完成）
 
