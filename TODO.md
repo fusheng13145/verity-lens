@@ -15,6 +15,7 @@
   - Phase 4h ✅ 2026-10-16：**底座升级 0.2.0-rc.2 + 事件流/session 接管联调**——npm 装 `@deepseek-ai/dsh@0.2.0-rc.2`（全局目录 EPERM，改装用户级 prefix）；真实底座验证 `--json` NDJSON 事件流可被 `parse_event_stream` 解析、`--session-id` 已知 id 接管成功/未知 id 报 `does not exist`、`--dump-config-schema` 输出 Cordis JSON Schema；`hal/version_lock.yml` verified_version 钉到 0.2.0-rc.2；契约测试 40 例全过（修正 Makefile `hal-contract-test` 指向错误目录 `tests/hal_contract`→`hal/contract_tests`）。完整 headless 运行仅因 deepseek API QUOTA 失败（外部账户）
   - Phase 4i ✅ 2026-10-16：**协作模型重评估信号补齐**——在 1.13.3 opt-in 埋点基础上补 §7.3 剩余两类信号：① `vl branch merge` 成功时比对 `VL_USER` 与 git committer 精确检测身份误配（`identity_mismatch`，`orchestrator/collab.py` 新增 `current_committer()`）；② RAG 共享索引写入观测钩子（`sidecar/rag/literature_rag.py` 加 `write_observer` 回调 + `collab_telemetry.rag_write_observer` 工厂，`rag_index_write` 事件，能力就绪待编排层接线）。仍为纯观测、不改协作模型；全量 217 通过
   - Phase 4j ✅ 2026-10-16：**P0 身份可信化**——`orchestrator/identity.py`（`resolve_identity` 可信度分级 `unverified`/`self_attested`/`mismatch`/`signed_verified` + `commit_signature_status` 读 GPG/SSH 签名作密码学锚点）+ `vl identity` 命令（`--require {set,coherent,signed}` CI 强制门禁）+ `scripts/check-identity.sh`（含 `--allowed-email-domain`）+ `.github/workflows/ci.yml` + Makefile `identity-check`；全量 233 通过。身份从「口头约定」升级为「可分级、可强制、可密码学锚定」，但不改变协作模型本身
+  - Phase 4k ✅ 2026-10-16：**preset patch 机读校验 + DSH schema 钉固**（Backlog C）——`orchestrator/patch_schema.py`（`validate_preset_patch` 按 JSON Schema 严格校验 preset_patch 声明 + `pin_dsh_schema` 把真实 DSH 配置 schema 钉到 `.verity/dsh-config-schema.json` 作契约参考；实测 0.2.0-rc.2 schema 为 Cordis 风格 root array，故校验针对 verity 契约而非 DSH schema）+ `DSHAdapter.dump_config_schema()`（0.2.x 特性门控）+ `vl bundle load --check-patch-schema`（默认关闭，可选增强）+ `docs/bundle-registry.md` §3 说明；全量 247 通过。诚实边界：verity preset_patch 尚未映射为 DSH 真正的 Cordis 叠加层（patch 文件格式官方未公开）
 - **下一步**：协作模型最终是否调整仍待 1–10 人团队真实痛点数据（按 §7.4 阈值驱动）；完整 headless 运行需先解决 deepseek API 配额（本机 QUOTA 余额不足，外部账户问题）
 
 ## 待完成事项（Backlog）
@@ -36,7 +37,7 @@
   - [ ] 待办：③ 团队启用 GPG/SSH 提交签名后，将 CI 门禁从 `--require set`（当前演示）升级为 `--require signed` 强校验（P0 已支持，待团队签名落地）。
 
 ### C. 可选增强（非阻塞，按需）
-- [ ] **preset patch 机读校验**：`0.2` 已提供 `--dump-config-schema`（Cordis JSON Schema），可接入 `vl bundle load` 对 preset patch 字段做机读校验（目前为可选增强，未强制）。
+- [x] **preset patch 机读校验**（2026-10-16 落地，见 CHANGELOG 1.13.6）：`orchestrator/patch_schema.py` 严格 JSON Schema 校验 preset_patch 声明 + `vl bundle load --check-patch-schema` 钉固真实 DSH 配置 schema 作契约参考；默认关闭，可选增强。
 - [ ] **RAG 写入埋点接线**：`rag_index_write` 观测能力已就绪，待编排层为 `sidecar/rag` 提供 CLI 入口（如 `vl rag index/query`）并在实例化 `LiteratureIndex` 时传入 `write_observer=rag_write_observer(workspace)`，即可自动采集 RAG 并发写入信号（见 §7.7「RAG 接线说明」）。
 - [ ] **季度切换演练**：蓝图要求定期评估备选底座接入成本，预防 deepseek-harness 预览版破坏性变更。
 

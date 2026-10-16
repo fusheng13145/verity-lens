@@ -2,6 +2,25 @@
 
 > 遵循 Keep a Changelog 风格，版本号 `MAJOR.MINOR.PATCH`。
 
+## [1.13.6] - 2026-10-16 — preset patch 机读校验 + DSH schema 钉固（Backlog C）
+
+### Added
+- **preset_patch 严格机读校验**：`orchestrator/patch_schema.py` 新增 `validate_preset_patch`
+  （按 `VERITY_PRESET_PATCH_SCHEMA` JSON Schema 校验 `preset` 必填、各字段类型、
+  `tool_whitelist` 元素类型、`additionalProperties` 禁止未知字段）；可离线、确定性、无底座依赖，
+  替代 `bundle_factory` 的 ad-hoc 字符串检查。
+- **DSH 配置 schema 钉固**：`DSHAdapter.dump_config_schema()`（按 0.2.x 特性门控，失败/不可用返回
+  `None`）+ `patch_schema.pin_dsh_schema` 把真实 DSH 配置 schema（Cordis 风格，root 为 array）钉到
+  `.verity/dsh-config-schema.json`（已 gitignore），填补「patch 文件结构官方未公开」的契约缺口。
+- **`vl bundle load <dir> --check-patch-schema`**：开启时做严格机读校验 + best-effort 钉固；
+  默认关闭（保持轻量、离线、无需底座），符合「可选增强，未强制」。
+- 测试：新增 14 例（校验 8 + 钉固 1 + 接入 5）；全量 247 通过。
+
+### Notes
+- 实测 DSH `0.2.0-rc.2` 配置 schema 为 Cordis 格式（root array，75 个 `$defs`，仅 5 个带 `properties`），
+  而 verity 物化的 preset_patch 是 verity 层抽象，尚未映射为 DSH 真正接受的 Cordis 叠加层——
+  故机读校验针对 verity 契约（而非对 DSH schema 做无意义的结构比对），schema 钉固作为后续映射工作的契约参考。
+
 ## [1.13.5] - 2026-10-16 — P0 身份可信化（vl identity + CI 门禁）
 
 ### Added

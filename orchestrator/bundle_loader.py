@@ -32,6 +32,10 @@ from orchestrator.bundle_factory import (
     validate_mcp_declaration,
     validate_preset_patch_declaration,
 )
+from orchestrator.patch_schema import (
+    pin_dsh_schema,
+    validate_preset_patch,
+)
 
 MANIFEST_NAME = "bundle.yml"
 
@@ -52,6 +56,7 @@ class LoadReport:
     preset: str = ""
     patch_path: str = ""
     degradations: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
     problems: list[str] = field(default_factory=list)
 
     @property
@@ -121,11 +126,18 @@ def load_manifest(bundle_dir: Path | str) -> dict:
     return data
 
 
-def load_bundle(bundle_dir: Path | str, adapter: DSHAdapter | None = None) -> LoadReport:
+def load_bundle(
+    bundle_dir: Path | str,
+    adapter: DSHAdapter | None = None,
+    check_patch_schema: bool = False,
+) -> LoadReport:
     """把 Bundle 注册到运行底座，返回加载报告。
 
     结构不合规时直接返回带 problems 的报告（不注册任何内容）。
     能力缺失时降级并记录到 degradations（不静默）。
+
+    `check_patch_schema`：开启时（默认关闭，属可选增强）对 preset_patch 声明做严格
+    JSON Schema 机读校验，并 best-effort 钉固真实 DSH 配置 schema（契约参考）。
     """
     d = Path(bundle_dir)
     adapter = adapter or DSHAdapter()
@@ -174,6 +186,18 @@ def load_bundle(bundle_dir: Path | str, adapter: DSHAdapter | None = None) -> Lo
         if patch_problems:
             report.problems.extend(patch_problems)
             return report
+        if check_patch_schema:
+            schema_problems = validate_preset_patch(patch_data)
+            if schema_problems:
+                report.problems.extend(schema_problems)
+                return report
+            # 钉固真实 DSH 配置 schema（best-effort，作为契约参考）；失败给 advisory
+            pinned = pin_dsh_schema(adapter)
+            if pinned is None:
+                report.warnings.append(
+                    "DSH 配置 schema 不可用 / 底座未支持 --dump-config-schema，"
+                    "已跳过钉固（仅完成 verity 契约校验）"
+                )
         if adapter.capabilities().get("preset_patch"):
             patch = PresetPatch(
                 preset=str(patch_data["preset"]),

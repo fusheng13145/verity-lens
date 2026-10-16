@@ -520,3 +520,23 @@ class DSHAdapter:
         if caps["session_log_export"] and not feats.get("json_events"):
             caps["session_log_export"] = False
         return caps
+
+    def dump_config_schema(self, profile: str = "headless") -> dict | None:
+        """抓取 DSH 配置 schema（`--dump-config-schema`，0.2.x 特性）。
+
+        底座不可用 / 特性缺失 / 非零退出 / 非法 JSON → 返回 None（绝不抛错）。
+        返回的 schema 为 Cordis 风格（root 为 array，含 `$defs`），非扁平 properties，
+        故本方法只负责抓取，字段语义校验交给 `orchestrator/patch_schema`。
+        """
+        if not self.available() or not self.features().get("config_schema_dump"):
+            return None
+        try:
+            proc = self._run(["--profile", profile, "--dump-config-schema"])
+        except (HarnessUnavailableError, subprocess.TimeoutExpired):
+            return None
+        if proc.returncode != 0:
+            return None
+        try:
+            return json.loads(proc.stdout)
+        except json.JSONDecodeError:
+            return None

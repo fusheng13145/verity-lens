@@ -322,7 +322,7 @@ def cmd_bundle(args) -> int:
         from orchestrator.bundle_loader import BundleLoadError, load_bundle
 
         try:
-            report = load_bundle(Path(args.discipline))
+            report = load_bundle(Path(args.discipline), check_patch_schema=args.check_patch_schema)
         except BundleLoadError as exc:
             print(f"[ERROR] {exc}")
             return EXIT_ERROR
@@ -342,6 +342,10 @@ def cmd_bundle(args) -> int:
                   + (f" → {report.patch_path}" if report.patch_path else ""))
         for msg in report.degradations:
             print(f"[DEGRADED] {msg}")
+        for msg in report.warnings:
+            print(f"[WARN] {msg}")
+        if args.check_patch_schema and not report.warnings:
+            print("[bundle] preset_patch 机读校验通过（DSH 配置 schema 已钉固）")
         return EXIT_OK
 
     # action == new
@@ -571,6 +575,11 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--path", default="bundles", help="Bundle 根目录（new 时）")
     sp.add_argument("--capability", default="core", help="首个 Skill 的能力名（new 时）")
     sp.add_argument("--interview", action="store_true", help="输出领域专家访谈提纲")
+    sp.add_argument(
+        "--check-patch-schema",
+        action="store_true",
+        help="load 时：对 preset_patch 做严格 JSON Schema 机读校验，并钉固真实 DSH 配置 schema（可选增强，默认关闭）",
+    )
     sp.set_defaults(func=cmd_bundle)
 
     sp = sub.add_parser("finalize", help="收尾校验与导出")

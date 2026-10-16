@@ -38,6 +38,12 @@
 - 命名：`<discipline>-<capability>`；SKILL.md 必含触发条件/方法论约束/输出 Schema/参考文件四节。
 - 验证：产出必须通过对应 JSON Schema；关键数值经 Sidecar 确定性工具复核。
 - L2 追加：preset_patch / mcp / golden_cases 三要素齐备（见 §1）。
+- **preset_patch 机读校验（可选增强，默认关闭）**：`vl bundle load <dir> --check-patch-schema`
+  按 `orchestrator/patch_schema.VERITY_PRESET_PATCH_SCHEMA`（JSON Schema）严格校验
+  preset_patch 声明（`preset` 必填、各字段类型、`tool_whitelist` 元素类型、`additionalProperties`
+  禁止未知字段）；并 best-effort 把真实 DSH 配置 schema 钉固到 `.verity/dsh-config-schema.json`
+  （Cordis 风格，填补「patch 文件结构官方未公开」的契约缺口，供后续 verity→Cordis 映射核对）。
+  默认 `vl bundle load` 不做该项校验（保持轻量、离线、无需底座）。
 
 ## 4. 分发与版本
 
