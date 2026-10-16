@@ -456,6 +456,38 @@ def cmd_branch(args) -> int:
     return EXIT_OK
 
 
+def cmd_identity(args) -> int:
+    """身份解析与可信度检查（协作重评估 P0：身份可信化，见 docs/collab.md §7.8）。
+
+    解析 ``VL_USER`` 与 git committer 的一致性，并读取最新提交签名状态。
+    ``--require`` 提供 CI 强制级别（set / coherent / signed），不满足时退出码 1。
+    """
+    from orchestrator import identity
+
+    workspace = Path(args.path)
+    ident = identity.resolve_identity(workspace)
+
+    if args.json:
+        print(json.dumps(ident.to_dict(), ensure_ascii=False))
+    else:
+        print(identity.render_report(ident))
+
+    if args.require == "set":
+        if not ident.vl_user:
+            print("[FAIL] --require set: VL_USER 未设置（无法标识当前用户）")
+            return EXIT_ERROR
+    elif args.require == "coherent":
+        if not ident.coherent:
+            print("[FAIL] --require coherent: VL_USER 与 git committer 不一致（身份无法对应）")
+            return EXIT_ERROR
+    elif args.require == "signed":
+        if ident.signature.get("status") != "G":
+            print("[FAIL] --require signed: 最新提交未通过 GPG/SSH 签名校验（status="
+                  + str(ident.signature.get("status")) + "）")
+            return EXIT_ERROR
+    return EXIT_OK
+
+
 def cmd_sandbox(args) -> int:
     """生成项目专属沙箱 compose（依据 design-blueprint.md §2.8.2）。"""
     from orchestrator.sandbox import (
@@ -557,6 +589,18 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("hypothesis_id", nargs="?", default=None, help="假设 ID（create 时必填）")
     sp.add_argument("--path", default=".", help="项目（Git 仓库）目录")
     sp.set_defaults(func=cmd_branch)
+
+    sp = sub.add_parser("identity", help="身份解析与可信度检查（P0 身份可信化）")
+    sp.add_argument("--path", default=".", help="Git 仓库目录")
+    sp.add_argument(
+        "--require",
+        choices=["set", "coherent", "signed"],
+        default=None,
+        help="CI 强制级别：set=必须设 VL_USER；coherent=VL_USER 须匹配 git committer；"
+             "signed=最新提交须通过 GPG/SSH 签名校验",
+    )
+    sp.add_argument("--json", action="store_true", help="输出 JSON（供 CI/hook 解析）")
+    sp.set_defaults(func=cmd_identity)
 
     return p
 

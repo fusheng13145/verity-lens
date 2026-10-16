@@ -14,6 +14,7 @@
   - Phase 4g ✅ 2026-10-15：**HPC 长任务提交工具落地**——`hpc_submit`（可插拔 backend：dry_run/mock/slurm/pbs；dry_run/mock 确定性、不实际执行，slurm/pbs 显式降级）+ 三学科注册 verity-hpc-submit MCP
   - Phase 4h ✅ 2026-10-16：**底座升级 0.2.0-rc.2 + 事件流/session 接管联调**——npm 装 `@deepseek-ai/dsh@0.2.0-rc.2`（全局目录 EPERM，改装用户级 prefix）；真实底座验证 `--json` NDJSON 事件流可被 `parse_event_stream` 解析、`--session-id` 已知 id 接管成功/未知 id 报 `does not exist`、`--dump-config-schema` 输出 Cordis JSON Schema；`hal/version_lock.yml` verified_version 钉到 0.2.0-rc.2；契约测试 40 例全过（修正 Makefile `hal-contract-test` 指向错误目录 `tests/hal_contract`→`hal/contract_tests`）。完整 headless 运行仅因 deepseek API QUOTA 失败（外部账户）
   - Phase 4i ✅ 2026-10-16：**协作模型重评估信号补齐**——在 1.13.3 opt-in 埋点基础上补 §7.3 剩余两类信号：① `vl branch merge` 成功时比对 `VL_USER` 与 git committer 精确检测身份误配（`identity_mismatch`，`orchestrator/collab.py` 新增 `current_committer()`）；② RAG 共享索引写入观测钩子（`sidecar/rag/literature_rag.py` 加 `write_observer` 回调 + `collab_telemetry.rag_write_observer` 工厂，`rag_index_write` 事件，能力就绪待编排层接线）。仍为纯观测、不改协作模型；全量 217 通过
+  - Phase 4j ✅ 2026-10-16：**P0 身份可信化**——`orchestrator/identity.py`（`resolve_identity` 可信度分级 `unverified`/`self_attested`/`mismatch`/`signed_verified` + `commit_signature_status` 读 GPG/SSH 签名作密码学锚点）+ `vl identity` 命令（`--require {set,coherent,signed}` CI 强制门禁）+ `scripts/check-identity.sh`（含 `--allowed-email-domain`）+ `.github/workflows/ci.yml` + Makefile `identity-check`；全量 233 通过。身份从「口头约定」升级为「可分级、可强制、可密码学锚定」，但不改变协作模型本身
 - **下一步**：协作模型最终是否调整仍待 1–10 人团队真实痛点数据（按 §7.4 阈值驱动）；完整 headless 运行需先解决 deepseek API 配额（本机 QUOTA 余额不足，外部账户问题）
 
 ## 待完成事项（Backlog）
@@ -22,8 +23,7 @@
 > 下列为真实待办，按性质分组，避免与上方已勾选的 Phase 明细混淆。
 
 ### A. 待发布（需用户本地操作）
-- [ ] **推送领先提交到 GitHub**：本地领先 `origin/main` 多个提交（含 Phase 4g hpc_submit / L4 集成测试 / Phase 4h 底座升级 / 文档梳理 / 协作重评估框架 / 1.13.4 协作埋点扩展 等）。本环境沙箱将 `git push` 判定为"数据外发"拦截，须用户在本地终端执行：
-  `git push origin main`（若 Host key 验证失败，先 `git -c strictHostKeyChecking=accept-new push origin main`）。
+- [x] **推送领先提交到 GitHub**：用户已于 2026-10-16 本地执行 `git push origin main`，领先提交已全部同步（含 Phase 4g hpc_submit / L4 集成测试 / Phase 4h 底座升级 / 文档梳理 / 协作重评估框架 / 1.13.4 协作埋点扩展 / 1.13.5 P0 身份可信化）。后续提交仍须本地推送（本环境沙箱拦截外发）。
 
 ### B. 外部依赖阻塞（非本项目缺陷）
 - [ ] **deepseek API 配额**：完整 headless 端到端运行目前在模型调用处因 `QUOTA`（余额不足）失败。补齐配额后 `dsh --profile headless --json "<task>"` 即可跑通——底座、契约、适配器（`parse_event_stream` / `--session-id` 接管 / `--dump-config-schema`）均已用真实 `0.2.0-rc.2` 验证可用。
@@ -31,7 +31,9 @@
   - [x] 2026-10-16 建重评估框架（`docs/collab.md` §7）：当前模型能力三档诚实分级（已实现并强制 / 已实现但默认未启用 / 明确非目标）、真实 gap 清单、待采集信号、决策阈值、候选演进方向（非承诺）。**最终是否调整模型仍待真实团队数据**。
   - [x] 2026-10-16 加 **opt-in 埋点**（见 §7.7）：`orchestrator/collab_telemetry.py` + `cmd_lock`/`cmd_branch` 接线；默认关闭零副作用；落盘 `.verity/collab-audit.jsonl`（已 gitignore，不泄露身份）。
   - [x] 2026-10-16 补齐 §7.3 剩余信号：① committer 精确身份误配（`identity_mismatch`，`vl branch merge` 比对 `VL_USER` vs git committer）；② RAG 共享索引写入观测（`rag_index_write`，`rag_write_observer` 工厂 + `write_observer` 回调，能力就绪待编排层接线）。见 CHANGELOG 1.13.4。
+  - [x] **2026-10-16 P0 身份可信化落地**（见 CHANGELOG 1.13.5 / §7.8）：`orchestrator/identity.py` 身份解析与可信度分级（`resolve_identity` / `commit_signature_status`）+ `vl identity` 命令（`--require {set,coherent,signed}` 强制门禁）；`scripts/check-identity.sh` 可移植 CI 门禁 + `.github/workflows/ci.yml` 接线 + Makefile `identity-check` 目标。身份从「口头约定」升级为「可分级、可强制、可密码学锚定」（签名密钥不可伪造）。
   - [ ] 待办：② 收集真实团队（1–10 人）使用痛点，按 7.3 / 7.7 信号命中 7.4 阈值后，启动模型变更设计（从真实痛点出发，不预设方案）。
+  - [ ] 待办：③ 团队启用 GPG/SSH 提交签名后，将 CI 门禁从 `--require set`（当前演示）升级为 `--require signed` 强校验（P0 已支持，待团队签名落地）。
 
 ### C. 可选增强（非阻塞，按需）
 - [ ] **preset patch 机读校验**：`0.2` 已提供 `--dump-config-schema`（Cordis JSON Schema），可接入 `vl bundle load` 对 preset patch 字段做机读校验（目前为可选增强，未强制）。

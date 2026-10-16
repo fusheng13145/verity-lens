@@ -106,7 +106,10 @@ fi
    即"并行写作强制写锁"目前依赖使用者自觉，不是系统强制。
 2. **身份是弱约定**：锁持有者仅为自由字符串，`VL_USER` 由团队口头约定注入；无认证/身份服务，
    错配会使写锁互斥语义失真（A 误标自己为 B 即可绕过）。**进展**：merge 时的 `VL_USER` vs git committer
-   精确比对已落地（`identity_mismatch` 埋点），但「无认证」本身仍是真实 gap（身份可伪造）。
+   精确比对已落地（`identity_mismatch` 埋点）；**P0（2026-10-16）新增 `vl identity` 可信度分级
+   + `--require signed` 签名校验 + `scripts/check-identity.sh` + CI 接线**（见 §7.8），身份从「口头约定」
+   升级为「可分级、可强制、可密码学锚定」。但 `set`/`coherent` 级别下 git config 仍可伪造，
+   仅 `signed` 级别为密码学可信——根因（无认证）在团队启用提交签名前仍部分存在。
 3. **共享会话 / 同文件并发是硬缺口**：若真实团队确实需要"多人同会话"或"同文件并发编辑"，
    当前模型明确不支持，需重新设计（非小修）。
 4. **RAG 文献库共享的并发写入协议未定义**：`sidecar/rag` 支持共享索引，但多人同时归档/检索的写入一致性无约定。
@@ -169,9 +172,41 @@ fi
   埋点能力已就绪且单测覆盖（`add` / `archive` 触发）；待 RAG 接入编排层即自动生效。
 - **尚未覆盖**（7.3 中唯一剩余）：「共享会话 / 同文件并发」需求访谈（硬缺口，需真实团队反馈才启动设计）。
 
+### 7.8 身份可信化（P0 已落地，2026-10-16）
+
+协作身份此前仅靠 `VL_USER`（口头约定）+ git committer（可伪造）的「自报家门」，写锁互斥与
+committer 比对都可能被绕过（A 标自己为 B 即可）。P0 把身份升级为**可解析、可分级、可强制**的结构：
+
+- 模块：`orchestrator/identity.py`（`resolve_identity` / `commit_signature_status`）；CLI：`vl identity`。
+- `vl identity [--json] [--require {set,coherent,signed}]`：
+  - 解析 `VL_USER` 与 git committer（`git config user.*`，规范化大小写比对），给出 `coherent`。
+  - 读取最新提交签名状态（GPG/SSH，`git log --pretty=%G?%n%GK`），作为**密码学锚点**
+    （`git config` 可伪造，签名密钥不可伪造）。
+  - 输出 `trust_level`：`unverified`（无 `VL_USER`）/ `self_attested`（与 committer 一致但仍可伪造）/
+    `mismatch`（设了但不一致）/ `signed_verified`（签名有效 **且** 与 `VL_USER` 一致，最强）。
+- 强制门禁（CI / pre-commit）：`--require set`（必须设 `VL_USER`）/ `coherent`（须匹配 committer）/
+  `signed`（最新提交须通过签名校验）。不满足退出码 1。
+- 可移植脚本：`scripts/check-identity.sh`（支持 `--allowed-email-domain` 组织邮箱白名单）+
+  GitHub Actions 接线 `.github/workflows/ci.yml`（演示 `--require set`，注释了 `--require signed`
+  强校验与域名白名单）。Makefile 新增 `identity-check` 目标。
+
+**接入团队 SSO / CI 注入（真实可信身份来源）**：
+- 本地 / pre-commit：由团队登录脚本把 SSO 用户名写入 `VL_USER`，并确保 `git config user.name/email`
+  与之匹配（此时 `--require coherent` 才是真强制）。
+- CI：用平台可信身份注入 `VL_USER`（GitHub Actions 示例 `VL_USER=${{ github.actor }}`；
+  SSO/OIDC 接入时改用 id-token 派生的登录标识）。
+- **最强锚点**：要求协作者启用 GPG/SSH 提交签名，CI 改用 `--require signed` —— 签名密钥不可伪造，
+  是真正可信的身份来源（已支持，待团队启用签名后开启）。
+
+**局限（诚实）**：`set` / `coherent` 级别仍未消除「本地 git config 可伪造」的根因，只是把一致性变为可检测；
+**只有 `signed` 级别是密码学可信**。故 `coherent` 适合本地纪律，`signed` 才是多人协作的推荐终态。
+身份可信化不改变协作模型本身，是重评估框架（§7）在 P0 的落地。
+
 ### 7.6 下一步
 
 1. ✅ 已为写锁 / 分支流 / committer 身份误配 / RAG 写入加 **opt-in 埋点**（见 7.7），信号可量化；默认关闭。
-2. ⏳ RAG 埋点待编排层采用 `rag_write_observer` 接线后自动生效（能力已就绪）。
-3. 在 1–10 人真实团队中使用 verity-lens，按 7.3 / 7.7 采集信号。
-4. 信号命中 7.4 阈值 → 启动模型变更设计（从真实痛点出发，不预设方案）。
+2. ✅ **P0 身份可信化已落地**（见 7.8）：`vl identity` 可信度分级 + `--require signed` 签名校验 +
+   `scripts/check-identity.sh` + CI 接线；团队启用提交签名后可切 `--require signed` 强校验。
+3. ⏳ RAG 埋点待编排层采用 `rag_write_observer` 接线后自动生效（能力已就绪）。
+4. 在 1–10 人真实团队中使用 verity-lens，按 7.3 / 7.7 采集信号。
+5. 信号命中 7.4 阈值 → 启动模型变更设计（从真实痛点出发，不预设方案）。

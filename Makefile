@@ -7,7 +7,7 @@ VENV_PY := $(VENV)/Scripts/python.exe   # Windows；Linux/macOS 请用 $(VENV)/b
 WEB     := web
 
 .PHONY: help venv install schema-check golden hal-contract-test correctness \
-        integration test api web reproduce clean
+        integration identity-check test api web reproduce clean
 
 help:            ## 显示帮助
 	@grep -E '^[a-zA-Z_-]+:.*?##' $(MAKEFILE_LIST) \
@@ -34,6 +34,9 @@ correctness:     ## L3：科研正确性抽检
 
 integration:     ## L4：Sidecar 工具 stdio 边界 ↔ 进程内模块 输出保真
 	$(VENV_PY) -m pytest tests/integration -q
+
+identity-check:  ## P0：身份可信化门禁（默认 coherent；CI 可用 --require signed）
+	bash scripts/check-identity.sh --require coherent --path .
 
 test:            ## 运行全部测试
 	$(VENV_PY) -m pytest -q

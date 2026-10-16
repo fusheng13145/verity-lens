@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install
+        run: |
+          python -m pip install -U pip
+          python -m pip install -e .
+      - name: Schema / Golden / HAL 契约 / 集成 / 正确性
+        run: |
+          python -m pytest tests/schema tests/golden hal/contract_tests tests/integration tests/correctness -q
+
+  identity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # 需要完整历史以校验签名；默认 fetch-depth=1 也够（仅校验 HEAD）
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install
+        run: |
+          python -m pip install -U pip
+          python -m pip install -e .
+      # 平台可信身份注入：github.actor 是触发本次流水线的用户登录名（非机器人）。
+      # 团队 SSO 接入时，替换为从 OIDC/id-token 派生的登录标识。
+      - name: 身份门禁（CI 演示：--require set，非阻断）
+        env:
+          VL_USER: ${{ github.actor }}
+        run: bash scripts/check-identity.sh --require set --path .
+      # 推荐（团队启用提交签名后取消注释，改为强校验）：
+      # - name: 身份门禁（强校验：要求 GPG/SSH 签名）
+      #   run: bash scripts/check-identity.sh --require signed --path .
+      # 可选：限制提交者邮箱为组织域名：
+      #   run: bash scripts/check-identity.sh --require signed --allowed-email-domain example.com --path .

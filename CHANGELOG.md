@@ -2,6 +2,25 @@
 
 > 遵循 Keep a Changelog 风格，版本号 `MAJOR.MINOR.PATCH`。
 
+## [1.13.5] - 2026-10-16 — P0 身份可信化（vl identity + CI 门禁）
+
+### Added
+- **身份解析与可信度分级**：`orchestrator/identity.py` 新增 `resolve_identity` / `commit_signature_status`；
+  `trust_level` ∈ `unverified` / `self_attested` / `mismatch` / `signed_verified`。
+- **`vl identity` 命令**：解析 `VL_USER` 与 git committer 一致性，并读取最新提交 GPG/SSH 签名状态
+  （`git log --pretty=%G?%n%GK`）作为密码学锚点；支持 `--json` 与 `--require {set,coherent,signed}` 强制门禁。
+- **可移植 CI / pre-commit 门禁**：`scripts/check-identity.sh`（支持 `--allowed-email-domain` 组织邮箱白名单）
+  + `.github/workflows/ci.yml`（演示 `--require set`，注释 `--require signed` 强校验与域名白名单）；
+  Makefile 新增 `identity-check` 目标。
+- 测试：新增 16 例（分级逻辑 12 + 签名解析 4 + CLI 接线）；全量 233 通过。
+
+### Changed
+- `docs/collab.md` 新增 §7.8（身份可信化 P0 落地 + SSO/CI 注入指南）；§7.2 gap②、§7.6 同步进展。
+
+### Scope Note
+- 仍为**协作模型重评估框架（§7）的 P0 落地，不改变协作模型本身**。`set`/`coherent` 级别 git config 仍可伪造，
+  仅 `signed` 级别为密码学可信；推荐团队启用提交签名后切 `--require signed`。
+
 ## [1.13.4] - 2026-10-16 — 协作埋点扩展：committer 身份误配 + RAG 写入观测
 
 ### Added
